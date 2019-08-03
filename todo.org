@@ -15,6 +15,7 @@
 ** TODO entry encryption
 *** DONE how get Nonce of entry -> random
 *** DONE correct data structure
+*** DONE getEntry() + getTag() remove 1st parameter
 *** DONE change Nonce on every edit? -> yes
 *** DONE encrypt nonce? -> absolutly
 *** TODO padding?
@@ -32,7 +33,6 @@
 ** TODO ask for password
 ** TODO Code refactoring
 *** TODO toString instea of print
-*** TODO getEntry() + getTag() remove 1st parameter
 *** TODO create seperate core class for db operations
  
 * Optional

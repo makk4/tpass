@@ -136,51 +136,55 @@ def getClient():
         except:
             click.echo('Error while accessing trezor device')
 
-def getEntry(es, entry_name):
+def getEntry(entry_name):
     if '/' in entry_name:
         entry_name = entry_name.split('/')[1]
-    for e in es:
-        if entry_name.lower() == es[e]['title'].lower():
-            return e, es[e]
-        elif entry_name.lower() == es[e]['note'].lower():
-            return e, es[e]
+    for e in entries:
+        if entry_name.lower() == entries[e]['title'].lower():
+            return e, entries[e]
+        elif entry_name.lower() == entries[e]['note'].lower():
+            return e, entries[e]
     return -1, None
 
-def getTag(ts, tag_name):
+def getTag(tag_name):
     tag_name = tag_name.split('/')[0]
-    for t in ts:
-        if tag_name.lower() == ts[t]['title'].lower():
-            return t, ts[t]
+    for t in tags:
+        if tag_name.lower() == tags[t]['title'].lower():
+            return t, tags[t]
     return -1, None
 
-def getEntriesByTag(es, tag_id):
+def getEntriesByTag(tag_id):
     result = {}
-    for e in es:
-        ts = es[e]['tags']
+    for e in entries:
+        ts = entries[e]['tags']
         if int(tag_id) == 0:
-            result[e] = es[e]
+            result[e] = entries[e]
         for t in ts:
             if t == int(tag_id):
-                result[e] = es[e]        
+                result[e] = entries[e]        
     return result
 
 def printEntries(es):
+    entry_str = ''
     for e in es:
-        click.echo(es[e]['title'])
+        entry_str = entry_str + es[e]['title'] + '\n'
+    return entry_str.rstrip().rstrip('\n')
 
 def printTags(ts, includeEntries=False):
+    tag_str = ''
     for t in ts:
         tag_id = t
         t = tags.get(tag_id)
+        icon = '?'
         for i in ICONS['icons']:
             if i['key'] == t['icon']:
-                click.echo(i['emoji'] + '  ' + t['title'])
+                icon = i['emoji']
                 break
+        tag_str = tag_str + icon + '  ' + t['title'] + '\n'
         if includeEntries:
-            es = getEntriesByTag(entries, tag_id)
-            click.echo('----------')
-            printEntries(es)
-            click.echo('----------')
+            es = getEntriesByTag(tag_id)
+            tag_str = tag_str + '----------\n' + printEntries(es) + '\n----------\n'
+    return tag_str.rstrip('\n')
 
 def tagsToString(ts, includeIds=False):
     chooseTags = ''
@@ -269,7 +273,7 @@ def tabCompletionEntries(ctx, args, incomplete):
     unlockStorage()
     tabs = []
     for t in tags:
-        selEntries = getEntriesByTag(entries, t)
+        selEntries = getEntriesByTag(t)
         for e in selEntries:
             tabs.append(tags[t]['title'].lower() + '/' + selEntries[e]['note'].lower())
     return [k for k in tabs if incomplete.lower() in k]
@@ -352,7 +356,7 @@ def find(name):# TODO alias
         if name.lower() in tags[str(t)]['title']:
             ts[str(t)] = tags[str(t)]
     printEntries(es)
-    printTags(ts)
+    click.echo(printTags(ts))
 
 def grep(name):
     '''Search for pattern in decrypted entries'''
@@ -369,21 +373,20 @@ def ls(tag_name):# TODO alias
     if tag_name == '':
         ts = tags
     else:
-        t = getTag(tags, tag_name)
+        t = getTag(tag_name)
         ts[t[0]] =t[1]
 
         if t[1] is None:
             return
-
-    printTags(ts, True) 
-
+    click.echo(printTags(ts, True) )
+    
 @cli.command()
 @click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 @click.option('-s', '--secrets', is_flag=True, help='show password and secret notes')
 @click.option('-j', '--json', is_flag=True, help='json format')
 def cat(entry_name, secrets, json): # TODO alias
     '''Decrypt and print an entry'''
-    e = getEntry(entries, entry_name)[1]
+    e = getEntry(entry_name)[1]
     if e is None:
         return
 
@@ -423,7 +426,7 @@ def cat(entry_name, secrets, json): # TODO alias
 @click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
     '''Decrypt and copy line of entry to clipboard'''
-    e = getEntry(entries, entry_name)[1]
+    e = getEntry(entry_name)[1]
     if e is None:
         return
 
@@ -462,7 +465,7 @@ def generate(length, entry_name, typeof, copy, seperator):
         password = cryptomodul.generatePassword(int(length))
 
     if entry_name is not '':
-        e = getEntry(entries, entry_name)[1]
+        e = getEntry(entry_name)[1]
         if e is None:
             return
         e = lockEntry(e)
@@ -479,7 +482,7 @@ def rm(entry_name):# TODO alias
     '''Remove entry or tag'''
     global db_json
 
-    entry_id = getEntry(entries, entry_name)[0]
+    entry_id = getEntry(entry_name)[0]
     if entry_id is -1:
         return
 
@@ -494,12 +497,12 @@ def insert(tag_name, name):
     '''Insert entry or tag'''
     global db_json
 
-    tag_id = getTag(tags, tag_name)[0]
+    tag_id = getTag(tag_name)[0]
     if tag_id is -1:
         return
 
     if tag_name is not 'all':
-        t = getTag(tags, t)
+        t = getTag(t)
     else:
         t = ''
     key = 0
@@ -516,8 +519,8 @@ def edit(entry_name):
     '''Edit entry or tag'''
     global db_json
 
-    entry_id = getEntry(entries, entry_name)[0]
-    e = getEntry(entries, entry_name)[1]
+    entry_id = getEntry(entry_name)[0]
+    e = getEntry(entry_name)[1]
     if e is None:
         return
 
@@ -591,7 +594,7 @@ def test():
     clearClipboard()
     return
     getClient()
-    e = getEntry(entries, 'coinbase.com')[1]
+    e = getEntry('coinbase.com')[1]
     print('---0')
     e = unlockEntry(e)
     e = lockEntry(e)
