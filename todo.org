@@ -1,0 +1,44 @@
+* Base features
+** DONE insert
+** DONE remove
+** DONE Icons
+** DONE findEntrieById Bug
+** DONE return Dict instead of list getByName
+** DONE Make get Methods more simple -> e['title'] instead of vv
+** DONE bash autocomplete
+** DONE Format compatiblle with trezor
+** DONE Export -> decrypt all function
+** DONE Error handling
+** DONE unit tests
+*** DONE emulator
+** TODO Wordlist to txt
+** TODO entry encryption
+*** DONE how get Nonce of entry -> random
+*** DONE correct data structure
+*** DONE change Nonce on every edit? -> yes
+*** DONE encrypt nonce? -> absolutly
+*** TODO padding?
+*** TODO how get IV
+** TODO support for case sensitive Names
+*** TODO tab completion
+*** TODO getters and find
+** TODO Performance
+*** TODO ICONS improvment -> dict search
+*** TODO tags
+*** TODO entries
+** TODO support for same filenames? Look at trezor implementation - define key values
+** TODO return values and input of getters in() str() ? --> ids
+** TODO switch to poetry
+** TODO ask for password
+** TODO Code refactoring
+*** TODO toString instea of print
+*** TODO getEntry() + getTag() remove 1st parameter
+*** TODO create seperate core class for db operations
+ 
+* Optional
+** TODO totp
+
+https://click.palletsprojects.com/en/7.x/bashcomplete/
+
+eval "$(_TPASS_COMPLETE=source tpass)"
+eval "$(_TPASS_COMPLETE=source_zsh tpass)"
