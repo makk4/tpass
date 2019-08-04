@@ -166,10 +166,8 @@ def getEntriesByTag(tag_id):
     return result
 
 def printEntries(es):
-    entry_str = ''
     for e in es:
-        entry_str = entry_str + es[e]['title'] + '\n'
-    return entry_str.rstrip().rstrip('\n')
+        click.echo(es[e]['title'])
 
 def printTags(ts, includeEntries=False):
     tag_str = ''
@@ -181,10 +179,12 @@ def printTags(ts, includeEntries=False):
             if i['key'] == t['icon']:
                 icon = i['emoji']
                 break
-        tag_str = tag_str + icon + '  ' + t['title'] + '\n'
+        click.echo(icon + '  ' + t['title'])
         if includeEntries:
             es = getEntriesByTag(tag_id)
-            tag_str = tag_str + '----------\n' + printEntries(es) + '\n----------\n'
+            click.echo('----------')
+            printEntries(es)
+            click.echo('----------')
     return tag_str.rstrip('\n')
 
 def tagsToString(ts, includeIds=False):
@@ -238,7 +238,6 @@ def lockEntry(e):
         keys = trezorapi.getTrezorKeys(client)
         e['nonce'] = trezorapi.getEncryptedNonce(client, e)
         plain_nonce = trezorapi.getDecryptedNonce(client, e)
-        print('plain_nonce: ' + plain_nonce)
     except:
         pass
         click.echo('Error while accessing trezor device')
@@ -248,15 +247,41 @@ def lockEntry(e):
         safeNote = cryptomodul.encryptEntryValue(str(safeNote), str(plain_nonce))
     except:
         raise Exception
+    print(pwd)
     return {'title': e['title'], 'username': e['username'], 'password': {'type': 'Buffer', 'data': pwd}, 'nonce': e['nonce'], 'tags': e['tags'], 'safe_note': {'type': 'Buffer', 'data': safeNote}, 'note': e['note'], 'success': True, 'export': False}
 
 def saveEntry(e):
     if e and e['success'] is True and e['export'] is False:
+        #db_json['entries'].update( {e[0] : e[1]} )
         db_json['entries'][str(e)] = e
         return True
     else:
         return False
         click.echo('Error detected, aborted')
+
+def editEntry(e):
+    edited_txt = click.edit('Save to apply changes, all text after ">:" will be read \n' + '\n[title] >:' + e['title'] + '\n[item/url*] >:' + e['note'] + '\n[username] >:' + e['username'] + '\n[password] >:' + e['password'] + '\n[secret] >:' + e['safe_note'], require_save=True)
+    if edited_txt:
+        e['success'] = False
+        for line in edited_txt.split('\n'):
+            #pattern = re.compile(r'\[title\] >:(.*?)')
+            if re.compile(r'\[title\] >:(.*?)').match(line):
+                e['title'] = re.split(r'\[title\] >:', line)[1]
+            elif re.compile(r'\[item/url\*\] >:(.*?)').match(line):
+                e['note'] = re.split(r'\[item/url\*\] >:', line)[1]
+            elif re.compile(r'\[username\] >:(.*?)').match(line):
+                e['username'] = re.split(r'\[username\] >:', line)[1]
+            elif re.compile(r'\[password\] >:(.*?)').match(line):
+                e['password'] = re.split(r'\[password\] >:', line)[1]
+            elif re.compile(r'\[secret\] >:(.*?)').match(line):
+                e['secret'] = re.split(r'\[secret\] >:', line)[1]
+    
+    click.echo(tagsToString(tags, True))
+    click.echo('Choose tag(s)')
+    inputTag = click.prompt(click.style('[tag(s)] ', bold=True), default=e['tags'], type=click.Choice(tags))
+    e['tags'] = inputTag
+    e['success'] = True
+    return lockEntry(e)
 
 def tabCompletionEntries(ctx, args, incomplete):
     loadConfig()
@@ -337,15 +362,15 @@ def find(name):# TODO alias
     es = {}
     ts = {}
     for e in entries:
-        if name.lower() in entries[str(e)]['title']:
+        if name.lower() in entries[str(e)]['title'].lower():
             es[str(e)] = entries[str(e)]
-        elif name.lower() in entries[str(e)]['note']:
+        elif name.lower() in entries[str(e)]['note'].lower():
             es[str(e)] = entries[str(e)] 
     for t in tags:
-        if name.lower() in tags[str(t)]['title']:
+        if name.lower() in tags[str(t)]['title'].lower():
             ts[str(t)] = tags[str(t)]
     printEntries(es)
-    click.echo(printTags(ts))
+    printTags(ts)
 
 def grep(name):
     '''Search for pattern in decrypted entries'''
@@ -365,7 +390,7 @@ def ls(tag_name):# TODO alias
 
         if t[1] is None:
             return
-    click.echo(printTags(ts, True) )
+    printTags(ts, True)
     
 @cli.command()
 @click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
@@ -493,8 +518,8 @@ def rm(entry_name):# TODO alias
 
 @cli.command()
 @click.argument('tag_name', default='all', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
-@click.argument('name', default='', type=click.STRING, nargs=1)
-def insert(tag_name, name):
+@click.argument('entry_name', default='', type=click.STRING, nargs=1)
+def insert(tag_name, entry_name):
     '''Insert entry or tag'''
     global db_json
 
@@ -502,17 +527,21 @@ def insert(tag_name, name):
     if tag_id is -1:
         return
 
-    if tag_name is not 'all':
-        t = getTag(t)
+    if tag_name is not 'all' and getTag(tag_name)[1]:
+        t = getTag(tag_name)[0]
+        tag = [t]
     else:
-        t = ''
-    key = 0
+        tag = []
+    entry_id = 0
     for e in entries:
-        key = int(e) + 1
-    e = {'title': name, 'username': '', 'password': {'type': 'Buffer', 'data': []}, 'nonce': '', 'tags': [t], 'safe_note': '', 'note': '', 'success': 'true', 'export': 'true'}
-    e = lockEntry(e)
-    saveEntry(e)
-    saveStorage()
+        entry_id = int(e) + 1
+
+    
+    e = {'title': entry_name, 'username': '', 'password': '', 'nonce': '', 'tags': tag, 'safe_note': '', 'note': '', 'success': False, 'export': True}
+    e = editEntry(e)
+    print(e)
+    # saveEntry(e)
+    # saveStorage()
 
 @click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 @cli.command()
@@ -526,17 +555,9 @@ def edit(entry_name):
         return
 
     e = unlockEntry(e)
-    edited_entry = click.edit('Save to apply changes' + '\n[title] ' + e['title'] + '\n[item/url*] ' + e['note'] + '\n[username*] ' + e['username'] + '\n[password] ' + e['password'] + '\n[secret] ' + e['safe_note'], require_save=True)
-    chooseTags = ''
-    click.echo(tagsToString(tags, True))
-    click.echo('Choose tag(s)')
-    inputTag = click.prompt(click.style('[tag(s)] ', bold=True), default=e['tags'], type=click.Choice(tags))
-    e['tags'] = inputTag
-    e['password'] = '1234'
-    if edited_entry:
-        e = lockEntry(e)
-        saveEntry(e)
-        # saveStorage()
+    e = editEntry(e)
+    # saveEntry(e)
+    # saveStorage()
 
 @cli.command()
 @click.argument('commands', type=click.STRING, nargs=-1)
@@ -577,33 +598,10 @@ def exportdb(tag_name, entry_name, path, fileformat):
 
         with open(os.path.join(path, 'export.json'), 'w', encoding='utf8') as f:
             json.dump(entries, f)
-    
+# TODO CSV    
 @cli.command()
 @click.option('-p', '--path', type=click.Path(), help='path to import file')
 def importdb(es):
     '''Import data base'''
     for e in es:
         lockEntry(e)
-
-@cli.command()
-def test():
-    '''test'''
-    # for i in range(0,10):
-    #     pwd = cryptomodul.encryptEntryValue('1234', 'e6b6a202f0b6c36a6f5d99480e3c3599c94caaaea8de3db60a46dea235ea6d61')
-    #     print(pwd)
-
-    # return
-    getClient()
-    e = getEntry('coinbase.com')[1]
-    print('---0')
-    e = unlockEntry(e)
-    e = lockEntry(e)
-    print('---1')
-    e = unlockEntry(e)
-    e = lockEntry(e)
-    print('---2')
-    e = unlockEntry(e)
-    e = lockEntry(e)
-    print('---3')
-    e = unlockEntry(e)
-    print('###')

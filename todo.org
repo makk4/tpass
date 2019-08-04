@@ -12,28 +12,33 @@
 ** DONE unit tests
 *** DONE emulator
 ** DONE Wordlist to txt
-** TODO entry encryption
+** DONE entry encryption
 *** DONE how get Nonce of entry -> random
 *** DONE correct data structure
 *** DONE getEntry() + getTag() remove 1st parameter
 *** DONE change Nonce on every edit? -> yes
 *** DONE encrypt nonce? -> absolutly
-*** TODO padding?
-*** TODO how get IV
+*** DONE padding?
+*** DONE how get IV -> Random
+** TODO Tag operations -t
+*** TODO insert
+*** TODO edit
+*** TODO remove
 ** TODO support for case sensitive Names
 *** TODO tab completion
 *** TODO getters and find
-** TODO Performance
-*** TODO ICONS improvment -> dict search
-*** TODO tags
-*** TODO entries
 ** TODO support for same filenames? Look at trezor implementation - define key values
 ** TODO return values and input of getters in() str() ? --> ids
 ** TODO switch to poetry
 ** TODO ask for password
 ** TODO Code refactoring
-*** TODO toString instea of print
 *** TODO create seperate core class for db operations
+*** TODO naming conventions tag_name -> tag_title
+** TODO Performance
+*** TODO ICONS improvment -> dict search
+*** TODO tags
+*** TODO entries
+** TODO click aliase
  
 * Optional
 ** TODO totp

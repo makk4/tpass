@@ -13,6 +13,7 @@ client = None
 class Tests_main(unittest.TestCase):
 
     def test_decryptEntryValue(self):
+        e_coinbase = {}
         client = trezorapi.getTrezorClient()
         plain_nonce = trezorapi.getDecryptedNonce(client, e_coinbase)
         pwd = cryptomodul.decryptEntryValue(plain_nonce, e_coinbase['password']['data'])
