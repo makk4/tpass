@@ -31,9 +31,11 @@ def decryptEntryValue(nonce, valArr):
     return json.loads(data)
 
 def encryptEntryValue(val, nonce):
-    iv = os.urandom(12)
+    iv = b''
+    while (len(iv) != 12):
+        iv = os.urandom(12)
 
-    cipherkey = bytes.fromhex(nonce[:64])
+    cipherkey = bytes.fromhex(nonce)
     cipher = Cipher(algorithms.AES(cipherkey), modes.GCM(iv), backend=default_backend())
     encryptor = cipher.encryptor()
     cipherText = encryptor.update(val.encode("utf-8", "replace")) + encryptor.finalize()
@@ -75,9 +77,6 @@ def encryptStorage(db_json, store_path, keys):
             
 def generatePassword(length):
     chars = (string.digits + string.ascii_letters + string.punctuation)
-    # getEntropy() #TODO get Trezor entropy
-    # urandom_entropy = os.urandom(32)
-    # passw = hashlib.sha256(trezor_entropy + urandom_entropy).digest()
     while True:
         password = ''.join(random.choice(chars) for x in range(length))
         if (any(c.islower() for c in password)
@@ -92,3 +91,9 @@ def generatePassphrase(length, words, seperator):
         choose = (secrets.randbelow(6) + 1) + 10 * (secrets.randbelow(6) + 1) + 100 * (secrets.randbelow(6) + 1) + 1000 * (secrets.randbelow(6) + 1) + 10000 * (secrets.randbelow(6) + 1)
         winners.append(words[str(choose)])          
     return seperator.join(winners) 
+
+def generatePin(length):
+    pin = ''
+    for i in range(0, int(length)):
+        pin = pin + str(secrets.randbelow(10))
+    return pin

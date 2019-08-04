@@ -202,10 +202,13 @@ def tagsToString(ts, includeIds=False):
     return chooseTags
 
 def unlockEntry(e):
-    # if e is None or e['success'] != 'true':
-    #     return None
-    e['export'] = 'true'
-    e['success'] = 'false'
+    if e is None or e['success'] is not True:
+        return None
+    e['success'] = False
+    e['export'] = True
+    pwd = e['password']['data']
+    safeNote = e['safe_note']['data']
+
     getClient()
     try:   
         keys = trezorapi.getTrezorKeys(client)
@@ -213,56 +216,42 @@ def unlockEntry(e):
     except:
         pass
         click.error('Error while accessing trezor device')
-    print(e['password'])
-    print(e['safe_note'])
-    pwd = ''
-    safeNote = ''
     try:
-        pwd = cryptomodul.decryptEntryValue(plain_nonce, e['password']['data'])
-        safeNote = cryptomodul.decryptEntryValue(plain_nonce, e['safe_note']['data'])
+        pwd = cryptomodul.decryptEntryValue(plain_nonce, pwd)
+        e['safe_note'] = cryptomodul.decryptEntryValue(plain_nonce, safeNote)
     except:
         pass
-    print(pwd)
-    print(safeNote)
-    e['password'] = pwd
-    e['safe_note'] = safeNote
-    e['success'] = 'true'
-    return e
+    e['success'] = True
+    return {'title': e['title'], 'username': e['username'], 'password': pwd, 'nonce': e['nonce'], 'tags': e['tags'], 'safe_note': e['safe_note'], 'note': e['note'], 'success': True, 'export': True}
+
 
 def lockEntry(e): 
-    # if e is None or e['success'] != 'true':
-    #     return None
-    e['export'] = 'false'
-    e['success'] = 'false'
-    title = e['title']
-    username = e['username']
-    note = e['note']
-    tags = e['tags']
+    if e is None or e['success'] is not True:
+        return None
+    e['success'] = False
+    e['export'] = False
     pwd = e['password']
     safeNote = e['safe_note']
-    nonce = e['nonce']
 
     getClient()
     try:
         keys = trezorapi.getTrezorKeys(client)
-        nonce = trezorapi.getEncryptedNonce(client, e)
-        e['nonce'] = nonce
+        e['nonce'] = trezorapi.getEncryptedNonce(client, e)
         plain_nonce = trezorapi.getDecryptedNonce(client, e)
+        print('plain_nonce: ' + plain_nonce)
     except:
         pass
         click.echo('Error while accessing trezor device')
 
     try:
-        pwd = cryptomodul.encryptEntryValue(pwd, plain_nonce)
-        safeNote = cryptomodul.encryptEntryValue(safeNote, plain_nonce)
-        return {'title': title, 'username': username, 'password': {'type': 'Buffer', 'data': pwd}, 'note': note, 'tags': tags, 'safe_note': {'type': 'Buffer', 'data': safeNote}, 'nonce': nonce, 'success': 'true', 'export': 'false'}
+        pwd = cryptomodul.encryptEntryValue(str(pwd), str(plain_nonce))
+        safeNote = cryptomodul.encryptEntryValue(str(safeNote), str(plain_nonce))
     except:
-        pass
-
-    return e
+        raise Exception
+    return {'title': e['title'], 'username': e['username'], 'password': {'type': 'Buffer', 'data': pwd}, 'nonce': e['nonce'], 'tags': e['tags'], 'safe_note': {'type': 'Buffer', 'data': safeNote}, 'note': e['note'], 'success': True, 'export': False}
 
 def saveEntry(e):
-    if e and e['success'] == 'true' and e['export'] == 'false':
+    if e and e['success'] is True and e['export'] is False:
         db_json['entries'][str(e)] = e
         return True
     else:
@@ -301,7 +290,7 @@ def cli():
     +~#~+~~+~#~+~~+~#~+~~+~#~+~~+~#~+~~\n
 
     CLI for Trezor Password Manager inspired by pass\n
-    Untested Beta Software! - Use with care\n
+    Untested Beta Software! - Do not use it\n
 
     @author: makk4 <manuel.kl900@gmail.com>\n
     version: 0.1.0\n
@@ -448,8 +437,7 @@ def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
 @click.option('--clip', '-c', is_flag=True, help='copy to clipboard')
 @click.option('-t', '--typeof', default='password', type=click.Choice(['password', 'wordlist', 'pin']), help='type of password')
 @click.option('-s', '--seperator', default=' ', type=click.STRING, help='seperator for passphrase')
-@click.option('-d', '--deviceentropy', default=False, help='use entropy from trezor')
-def generate(length, entry_name, typeof, clip, seperator, deviceentropy):
+def generate(length, entry_name, typeof, clip, seperator):
     '''Generate new password'''
     global db_json
 
@@ -469,12 +457,13 @@ def generate(length, entry_name, typeof, clip, seperator, deviceentropy):
                         else:
                             raise Exception
         except:
+            click.echo('error while processing wordlist.txt file')
             return
-        pwd = cryptomodul.generatePassphrase(int(length), words, seperator)
+        pwd = cryptomodul.generatePassphrase(length, words, seperator)
     elif typeof == 'pin':
-        pwd = '1234'
+        pwd = cryptomodul.generatePin(length)
     else:
-        pwd = cryptomodul.generatePassword(int(length))
+        pwd = cryptomodul.generatePassword(length)
 
     if entry_name is not '':
         e = getEntry(entry_name)[1]
@@ -599,8 +588,11 @@ def importdb(es):
 @cli.command()
 def test():
     '''test'''
-    clearClipboard()
-    return
+    # for i in range(0,10):
+    #     pwd = cryptomodul.encryptEntryValue('1234', 'e6b6a202f0b6c36a6f5d99480e3c3599c94caaaea8de3db60a46dea235ea6d61')
+    #     print(pwd)
+
+    # return
     getClient()
     e = getEntry('coinbase.com')[1]
     print('---0')

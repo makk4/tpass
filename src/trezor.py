@@ -18,6 +18,7 @@ BIP32_PATH = parse_path("10016h/0")
 def askForPassword():
     return
 
+# @author:satoshilabs
 def wait_for_devices():
     devices = enumerate_devices()
     while not len(devices):
@@ -27,6 +28,7 @@ def wait_for_devices():
 
     return devices
 
+# @author:satoshilabs
 def choose_device(devices):
     if not len(devices):
         raise RuntimeError("No Trezor connected!")
@@ -63,6 +65,7 @@ def choose_device(devices):
     except Exception:
         raise ValueError("Invalid choice, exiting...")
 
+# @author:satoshilabs
 def getDecryptedNonce(client, entry):
     if 'item' in entry:
         item = entry['item']
@@ -108,6 +111,7 @@ def getEncryptedNonce(client, entry):
 
     return encrypted_nonce.hex()
 
+# @author:satoshilabs
 def getFileEncKey(masterKey):
     filekey, enckey = masterKey[:len(masterKey) // 2], masterKey[len(masterKey) // 2:]
     FILENAME_MESS = b'5f91add3fa1c3c76e90c90a3bd0999e2bd7833d06a483fe884ee60397aca277a'
@@ -115,6 +119,7 @@ def getFileEncKey(masterKey):
     filename = digest + '.pswd'
     return [filename, filekey, enckey]
 
+# @author:satoshilabs
 def decryptMasterKey(client):
     ENC_KEY = 'Activate TREZOR Password Manager?'
     ENC_VALUE = bytes.fromhex('2d650551248d792eabf628f451200d7f51cb63e46aadcbb1038aacb05e8c8aee2d650551248d792eabf628f451200d7f51cb63e46aadcbb1038aacb05e8c8aee')
@@ -133,7 +138,7 @@ def getEntropy(client, length):
     urandom_entropy = os.urandom(length)
     entropy = hashlib.sha256(trezor_entropy + urandom_entropy).digest()
     if len(entropy) != length:
-        return None
+        raise ValueError(length + ' bytes entropy expected')
     return entropy
 
 def getTrezorKeys(client):
