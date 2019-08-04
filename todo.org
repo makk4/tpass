@@ -40,7 +40,7 @@
 *** TODO create seperate core class for db operations
 *** TODO naming conventions tag_name -> tag_title
 ** TODO Performance
-*** TODO ICONS improvment -> dict search
+*** DONE ICONS improvment -> dict search
 *** TODO tags
 *** TODO entries
 ** TODO click aliase

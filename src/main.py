@@ -78,10 +78,12 @@ def unlockStorage():
         return -2
 
     if not os.path.exists(DEV_SHM):
+        click.echo('warning: /dev/shm not found on host, using not as secure /tmp/ for plain metadata')
         tmp_path = TMP
 
     tmp_file = os.path.join(tmp_path, config['file_name'] + '.json')
     if not os.path.isfile(tmp_file) or (os.path.isfile(tmp_file) and (os.path.getmtime(tmp_file) < os.path.getmtime(db_file))):
+        click.echo('unlocking storage')
         getClient()
         try:
             keys = trezorapi.getTrezorKeys(client)
@@ -391,6 +393,7 @@ def find(name):# TODO alias
             ts[str(t)] = t
     printEntries(es)
     printTags(ts)
+    sys.exit(0)
 
 def grep(name):
     '''Search for pattern in decrypted entries'''
@@ -406,6 +409,7 @@ def grep(name):
             click.echo(click.style('[' + e['password'] + ']//field: <password>//: ', bold=True) + e['password'].lower())
         elif name.lower() in e['safe_note'].lower():
             click.echo(click.style('[' + e['safe_note'] + ']//field: <titsafe_notele>//: ', bold=True) + e['safe_note'].lower())
+    sys.exit(0)
 
 @cli.command()
 @click.argument('tag_name', default='', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
@@ -421,6 +425,7 @@ def ls(tag_name):# TODO alias
         if t[1] is None:
             return
     printTags(ts, True)
+    sys.exit(0)
     
 @cli.command()
 @click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
@@ -460,6 +465,7 @@ def cat(entry_name, secrets, json): # TODO alias
             click.style('item/url: ', bold=True) + e['title'] + '\n' +
             click.style('secret:   ', bold=True) + safeNote  + '\n' +
             click.style('tags:     ', bold=True) + tag)
+    sys.exit(0)
 
 @cli.command()
 @click.option('-u', '--user', is_flag=True, help='copy user')
@@ -485,6 +491,7 @@ def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
         clearClipboard()
     
     #click.launch('https://www.' + e['title'])
+    sys.exit(0)
     
 @cli.command()
 @click.argument('length', default=15, type=int)
@@ -533,6 +540,7 @@ def generate(insert, typeof, clip, seperator, force, length):
         clearClipboard()
     else:
         click.echo(pwd)
+    sys.exit(0)
 
 # TODO make options TRU/FALSE tag and -1 all args
 @cli.command()
@@ -556,6 +564,7 @@ def rm(entry_name, tag, force):# TODO alias
         if force or click.confirm('Delete entry ' + click.style(entries[entry_id]['title'], bold=True)):
             del db_json['entries'][entry_id]
             saveStorage()
+    sys.exit(0)
 
 @cli.command()
 @click.argument('tag_name', default='', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
@@ -590,6 +599,7 @@ def insert(tag_name, entry_name, tag):
         e = editEntry(e)
         saveEntry(e, str(entry_id))
         saveStorage()
+    sys.exit(0)
 
 @cli.command()
 @click.argument('entry_name', type=click.STRING, default='', nargs=1, autocompletion=tabCompletionEntries)
@@ -615,12 +625,14 @@ def edit(entry_name, tag):
         e = editEntry(e)
         saveEntry(e, entry_id)
         saveStorage()
+    sys.exit(0)
 
 @cli.command()
 @click.argument('commands', type=click.STRING, nargs=-1)
 def git(commands):
     '''Call git commands on db storage'''
     subprocess.call('git '+ ' '.join(commands), cwd=config['store_path'], shell=True)
+    sys.exit(0)
 
 @cli.command()
 @click.argument('argument', type=click.Choice(['reset', 'edit']), nargs=1, autocompletion=tabCompletionEntries)
@@ -633,12 +645,14 @@ def conf(argument):
             os.remove(CONFIG_FILE)
     if argument == 'edit':
         click.edit(filename=CONFIG_FILE)
+    sys.exit(0)
 
 @cli.command()
 def lock():
     '''Remove Plain Metadata file from disk'''
     os.remove(os.path.join(TMP, config['file_name'] + '.json'))
     os.remove(os.path.join(DEV_SHM, config['file_name'] + '.json'))
+    sys.exit(0)
 
 # TODO CSV
 @click.argument('tag_name', default='all', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
@@ -655,6 +669,7 @@ def exportdb(tag_name, entry_name, path, fileformat):
 
         with open(os.path.join(path, 'export.json'), 'w', encoding='utf8') as f:
             json.dump(entries, f)
+    sys.exit(0)
 # TODO CSV    
 @cli.command()
 @click.option('-p', '--path', type=click.Path(), help='path to import file')
@@ -662,3 +677,4 @@ def importdb(es):
     '''Import data base'''
     for e in es:
         lockEntry(e)
+    sys.exit(0)
