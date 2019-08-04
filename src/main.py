@@ -250,10 +250,9 @@ def lockEntry(e):
     print(pwd)
     return {'title': e['title'], 'username': e['username'], 'password': {'type': 'Buffer', 'data': pwd}, 'nonce': e['nonce'], 'tags': e['tags'], 'safe_note': {'type': 'Buffer', 'data': safeNote}, 'note': e['note'], 'success': True, 'export': False}
 
-def saveEntry(e):
+def saveEntry(e, entry_id):
     if e and e['success'] is True and e['export'] is False:
-        #db_json['entries'].update( {e[0] : e[1]} )
-        db_json['entries'][str(e)] = e
+        db_json['entries'].update( {entry_id : e} )
         return True
     else:
         return False
@@ -491,11 +490,13 @@ def generate(length, entry_name, typeof, clip, seperator):
         pwd = cryptomodul.generatePassword(length)
 
     if entry_name is not '':
-        e = getEntry(entry_name)[1]
+        e = getEntry(entry_name)
+        entry_id = e[0]
+        e = e[1]
         if e is None:
             return
         e = lockEntry(e)
-        saveEntry(e)
+        saveEntry(e, entry_id)
     if clip:
         pyperclip.copy(pwd)
         clearClipboard()
@@ -536,12 +537,10 @@ def insert(tag_name, entry_name):
     for e in entries:
         entry_id = int(e) + 1
 
-    
     e = {'title': entry_name, 'username': '', 'password': '', 'nonce': '', 'tags': tag, 'safe_note': '', 'note': '', 'success': False, 'export': True}
     e = editEntry(e)
-    print(e)
-    # saveEntry(e)
-    # saveStorage()
+    saveEntry(e, entry_id)
+    saveStorage()
 
 @click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 @cli.command()
@@ -556,8 +555,8 @@ def edit(entry_name):
 
     e = unlockEntry(e)
     e = editEntry(e)
-    # saveEntry(e)
-    # saveStorage()
+    saveEntry(e, entry_id)
+    saveStorage()
 
 @cli.command()
 @click.argument('commands', type=click.STRING, nargs=-1)
