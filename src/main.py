@@ -294,11 +294,11 @@ def editEntry(e):
     e['success'] = True
     return lockEntry(e)
 
-def editTag(t):
+def editTag(t, tag_id):
     t['title'] = click.prompt('[title] ', default=t['title'])
     click.echo(iconsToString())
-    inputIcon = click.prompt(click.style('[tag(s)] ', bold=True), default=t['icon'], type=click.Choice(ICONS))
-    t['icon']
+    t['icon'] = click.prompt(click.style('[tag(s)] ', bold=True), default=t['icon'], type=click.Choice(ICONS))
+    db_json['entries'].update( {tag_id : t} )
     return t
 
 def tabCompletionEntries(ctx, args, incomplete):
@@ -566,12 +566,12 @@ def insert(tag_name, entry_name, tag):
     global db_json
     if tag is True:
         tag_id = getTag(tag_name)[0]
-        if tag_id is not -1:
+        if tag_id:
             sys.exit(-1)
+        tag_id = '100'
         t = {'title': '', 'icon': ''}
-        editTag(t)
-        print(t)
-        #saveStorage()
+        editTag(t, tag_id)
+        saveStorage()
     else:
         tag_id = getTag(tag_name)[0]
         if tag_id is -1:
@@ -599,12 +599,12 @@ def edit(entry_name, tag):
     global db_json
     if tag:
         t = getTag(tag)
-        print(tag)
         tag_id = t[0]
         t = t[1]
         if t is None:
             sys.exit(-1)
-        editTag(t)
+        editTag(t, tag_id)
+        saveStorage()
     else:
         entry_id = getEntry(entry_name)[0]
         e = getEntry(entry_name)[1]
