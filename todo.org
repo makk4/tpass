@@ -1,4 +1,4 @@
-* Base features
+* Basic features
 ** DONE insert
 ** DONE remove
 ** DONE Icons
@@ -11,7 +11,7 @@
 ** DONE Error handling
 ** DONE unit tests
 *** DONE emulator
-** TODO Wordlist to txt
+** DONE Wordlist to txt
 ** TODO entry encryption
 *** DONE how get Nonce of entry -> random
 *** DONE correct data structure

@@ -90,7 +90,5 @@ def generatePassphrase(length, words, seperator):
     winners = []
     for i in range(0, int(length)):
         choose = (secrets.randbelow(6) + 1) + 10 * (secrets.randbelow(6) + 1) + 100 * (secrets.randbelow(6) + 1) + 1000 * (secrets.randbelow(6) + 1) + 10000 * (secrets.randbelow(6) + 1)
-        for w in words:
-            if int(w['key']) == choose:
-                winners.append(w['word'])             
+        winners.append(words[str(choose)])          
     return seperator.join(winners) 

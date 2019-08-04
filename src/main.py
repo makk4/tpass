@@ -9,6 +9,7 @@ import tempfile
 import pyperclip
 import time
 import pyotp
+import re
 
 ICONS = {'icons': [{'key':'home','emoji':'🏠'}, {'key':'person-stalker','emoji':'👩‍👩‍👦'}, {'key':'social-bitcoin','emoji':' ₿'}, {'key':'person', 'emoji':'😀'},  {'key':'star', 'emoji':'⭐'},
  {'key':'flag', 'emoji':'🏳️'}, {'key':'heart', 'emoji':'❤'}, {'key':'settings', 'emoji':'⚙️'}, {'key':'email', 'emoji':'✉️'}, {'key':'cloud', 'emoji':'☁️'}, {'key':'alert-circled', 'emoji':'⚠️'},
@@ -18,16 +19,17 @@ GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps'
 GIT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
 CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
 CONFIG_FILE = os.path.join(CONFIG_PATH, 'config.json')
-WORDLIST = os.path.join(CONFIG_PATH, 'wordlist.json')
+WORDLIST = os.path.join(CONFIG_PATH, 'wordlist.txt')
 TMP = os.path.join(tempfile.gettempdir())
 DEV_SHM = os.path.join('/', 'dev', 'shm')
+CLIPBOARD_CLEAR_TIME = 15
 
 newEntry_plain = {'title': '', 'username': '', 'password': '', 'note': '', 'tags': [], 'safe_note': '', 'nonce': '', 'success': True, 'export': True}
 newEntry = {'title': '', 'username': '', 'password': {'type': 'Buffer', 'data': []}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'Buffer', 'data': []}, 'nonce': '', 'success': True, 'export': False}
 entries = {}
 tags = {'0': {'title': 'All', 'icon': 'home'}, }
 db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
-config = { 'file_name': '', 'store_path': DROPBOX_PATH, 'cloud_provider': 'dropbox', 'pinentry': 'false'}
+config = {'file_name': '', 'store_path': DROPBOX_PATH, 'cloud_provider': 'dropbox', 'pinentry': 'false'}
 client = None
 
 '''
@@ -119,8 +121,7 @@ def saveStorage():
     return True
 
 def clearClipboard():
-    CLIPBOARD_CLEAR_TIME = 15
-    with click.progressbar(length=CLIPBOARD_CLEAR_TIME, label='Clipboard will clear', show_percent=False, fill_char='|', empty_char='.') as bar:
+    with click.progressbar(length=CLIPBOARD_CLEAR_TIME, label='Clipboard will clear', show_percent=False, fill_char='=', empty_char=' ') as bar:
         for i in bar:
             time.sleep(1)
     pyperclip.copy('')
@@ -300,7 +301,7 @@ def cli():
     +~#~+~~+~#~+~~+~#~+~~+~#~+~~+~#~+~~\n
 
     CLI for Trezor Password Manager inspired by pass\n
-    Beta Software! - Use with care\n
+    Untested Beta Software! - Use with care\n
 
     @author: makk4 <manuel.kl900@gmail.com>\n
     version: 0.1.0\n
@@ -340,7 +341,6 @@ def init(path, cloud, pinentry):
     else:
         return 0
 
-
 @cli.command()
 @click.argument('name', type=click.STRING, nargs=1)
 def find(name):# TODO alias
@@ -363,8 +363,6 @@ def grep(name):
     for e in entries:
         e = unlockEntry(entries[e])
 
-    
-    
 @cli.command()
 @click.argument('tag_name', default='', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
 def ls(tag_name):# TODO alias
@@ -442,13 +440,16 @@ def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
             pyperclip.copy(secrets[0])
         clearClipboard()
     
+    #click.launch('https://www.' + e['title'])
+    
 @cli.command()
 @click.argument('length', default=15, type=int)
 @click.argument('entry_name', default='', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries) # TODO -i --insert option boolean with argument entries
-@click.option('--copy', '-c', is_flag=True, help='copy to clipboard')
+@click.option('--clip', '-c', is_flag=True, help='copy to clipboard')
 @click.option('-t', '--typeof', default='password', type=click.Choice(['password', 'wordlist', 'pin']), help='type of password')
 @click.option('-s', '--seperator', default=' ', type=click.STRING, help='seperator for passphrase')
-def generate(length, entry_name, typeof, copy, seperator):
+@click.option('-d', '--deviceentropy', default=False, help='use entropy from trezor')
+def generate(length, entry_name, typeof, clip, seperator, deviceentropy):
     '''Generate new password'''
     global db_json
 
@@ -456,13 +457,24 @@ def generate(length, entry_name, typeof, copy, seperator):
         click.echo(length + ' is too short for password type')
         return
     if typeof == 'wordlist': # TODO TXT
-        with open(WORDLIST) as f:  
-            wordlist = json.load(f)['words']
-        password = cryptomodul.generatePassphrase(int(length), wordlist, seperator)
+        words = {}
+        try:
+            with open(WORDLIST) as f:
+                for line in f.readlines():
+                    pattern = re.compile('^([1-6]){5}\t(.)+$')
+                    if pattern.match(line):
+                        key, value = line.rstrip('\n').split('\t')
+                        if(not key in words):
+                            words[key] = value
+                        else:
+                            raise Exception
+        except:
+            return
+        pwd = cryptomodul.generatePassphrase(int(length), words, seperator)
     elif typeof == 'pin':
-        password = '1234'
+        pwd = '1234'
     else:
-        password = cryptomodul.generatePassword(int(length))
+        pwd = cryptomodul.generatePassword(int(length))
 
     if entry_name is not '':
         e = getEntry(entry_name)[1]
@@ -470,11 +482,11 @@ def generate(length, entry_name, typeof, copy, seperator):
             return
         e = lockEntry(e)
         saveEntry(e)
-    if copy:
-        pyperclip.copy(password)
+    if clip:
+        pyperclip.copy(pwd)
         clearClipboard()
     else:
-        click.echo(password)
+        click.echo(pwd)
 
 @cli.command()
 @click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
@@ -525,7 +537,7 @@ def edit(entry_name):
         return
 
     e = unlockEntry(e)
-    edited_entry = click.edit('[title] ' + e['title'] + '\n' + '[item/url*] ' + e['note'] + '\n' + '[username*] ' + e['username'] + '\n' + '[password] ' + e['password'] + '\n' + '[secret] ' + e['safe_note'] + '\n')
+    edited_entry = click.edit('Save to apply changes' + '\n[title] ' + e['title'] + '\n[item/url*] ' + e['note'] + '\n[username*] ' + e['username'] + '\n[password] ' + e['password'] + '\n[secret] ' + e['safe_note'], require_save=True)
     chooseTags = ''
     click.echo(tagsToString(tags, True))
     click.echo('Choose tag(s)')
@@ -553,11 +565,7 @@ def conf(argument):
         if os.path.isfile(CONFIG_FILE):
             os.remove(CONFIG_FILE)
     if argument == 'edit':
-        edited_config = click.edit(json.dumps(config, indent=4) + '\n')
-        if edited_config:
-            config = json.loads(edited_config)
-            writeConfig()
-            loadConfig()
+        click.edit(filename=CONFIG_FILE)
 
 @cli.command()
 def lock():
@@ -574,7 +582,7 @@ def lock():
 def exportdb(tag_name, entry_name, path, fileformat):
     '''Export data base'''
     if fileformat == 'json':
-        with click.progressbar(entries, label='Exporting DB', show_eta=False, fill_char='|', empty_char='.') as bar:
+        with click.progressbar(entries, label='Exporting DB', show_eta=False, fill_char='#', empty_char='-') as bar:
             for e in bar:
                 entries[e] = unlockEntry(e)
 
