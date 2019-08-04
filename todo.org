@@ -1,14 +1,22 @@
 * Basic features
-** DONE insert
-** DONE remove
+** TODO Entry operations
+*** DONE edit
+*** TODO insert
+*** DONE remove
 ** DONE Icons
 ** DONE findEntrieById Bug
-** DONE return Dict instead of list getByName
-** DONE Make get Methods more simple -> e['title'] instead of vv
 ** DONE bash autocomplete
 ** DONE Format compatiblle with trezor
-** DONE Export -> decrypt all function
+** DONE Export
+** TODO Tag operations -t
+*** TODO insert
+*** TODO edit
+*** TODO remove
+*** TODO CSV
+** DONE Import
+*** TODO CSV
 ** DONE Error handling
+*** TODO check 
 ** DONE unit tests
 *** DONE emulator
 ** DONE Wordlist to txt
@@ -20,10 +28,7 @@
 *** DONE encrypt nonce? -> absolutly
 *** DONE padding?
 *** DONE how get IV -> Random
-** TODO Tag operations -t
-*** TODO insert
-*** TODO edit
-*** TODO remove
+*** TODO get entropy from device
 ** TODO support for case sensitive Names
 *** TODO tab completion
 *** TODO getters and find
