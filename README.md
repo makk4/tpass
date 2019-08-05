@@ -2,18 +2,25 @@
 
 Simple Trezor Password Manager interface for command line, inspired by pass.
 
-Untested Beta Software, do not use this
+Untested Beta Software! - Do not use it
 
 ### Features
 - Trezor Password Manager Compatible
 - Supports Trezor One and Trezor Model T
 - cross Plattform. Windows, Linux, MacOS
 - Dropbox, Google Drive, Git synchronisation
-- generate random Passwords and Passphrases, also from Wordlists
+- generate random Passwords and Passphrases
+- Import for custom Wordlists, default is EFF large
 - list, insert, delete, edit entries
 - copy passwords to clipboard or show
-- export, import database in common formats
+- export, import database in JSON, CSV
 
+### Future plans:
+- Ask for password on Trezor device
+- TOTP support
+- Check for password leaks, online and with local DB
+- Support for Ledger Nano S/X, if possible
+- Staying compatible with TPM
 
 ## Install
 

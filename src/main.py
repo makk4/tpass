@@ -28,7 +28,7 @@ newEntry = {'title': '', 'username': '', 'password': {'type': 'Buffer', 'data': 
 entries = {}
 tags = {'0': {'title': 'All', 'icon': 'home'}, }
 db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
-config = {'file_name': '', 'store_path': DROPBOX_PATH, 'cloud_provider': 'dropbox', 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME}
+config = {'file_name': '', 'store_path': DROPBOX_PATH, 'cloud_provider': 'dropbox', 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True}
 client = None
 
 '''
@@ -90,6 +90,7 @@ def unlockStorage():
             keys = trezorapi.getTrezorKeys(client)
         except:
             click.echo('Error while getting keys from device')
+            sys.exit(-1)
         config['file_name'] = keys[0]
         db_file = os.path.join(config['store_path'], config['file_name'])
         tmp_file = os.path.join(tmp_path, config['file_name'] + '.json')
@@ -182,15 +183,16 @@ def saveTag(tag, tag_id=None):
         click.echo('Error detected, aborted')
 
 def getEntriesByTag(tag_id):
-    result = {}
+    es = {}
     for e in entries:
         ts = entries[e]['tags']
-        if int(tag_id) == 0:
-            result[e] = entries[e]
-        for t in ts:
-            if t == int(tag_id):
-                result[e] = entries[e]        
-    return result
+        if tag_id == '0' and ts == []:
+            es[e] = entries[e]
+        else:
+            for t in ts:
+                if t == int(tag_id):
+                    es[e] = entries[e]        
+    return es
 
 def printEntries(es):
     for e in es:
@@ -291,33 +293,28 @@ def saveEntry(entry, entry_id=None):
         click.echo('Error detected, aborted')
 
 def editEntry(e):
-    edited_txt = click.edit('Save to apply changes, all text after ">:" will be read \n' + '\n[title] >:' + e['title'] + '\n[item/url*] >:' + e['note'] + '\n[username] >:' + e['username'] + '\n[password] >:' + e['password'] + '\n[secret] >:' + e['safe_note'], require_save=True)
-    if edited_txt:
-        e['success'] = False
-        for line in edited_txt.split('\n'):
-            if re.compile(r'\[title\] >:(.*?)').match(line):
-                e['title'] = re.split(r'\[title\] >:', line)[1]
-            elif re.compile(r'\[item/url\*\] >:(.*?)').match(line):
-                e['note'] = re.split(r'\[item/url\*\] >:', line)[1]
-            elif re.compile(r'\[username\] >:(.*?)').match(line):
-                e['username'] = re.split(r'\[username\] >:', line)[1]
-            elif re.compile(r'\[password\] >:(.*?)').match(line):
-                e['password'] = re.split(r'\[password\] >:', line)[1]
-            elif re.compile(r'\[secret\] >:(.*?)').match(line):
-                e['safe_note'] = re.split(r'\[secret\] >:', line)[1]
-    click.echo(tagsToString(tags, True))
-    click.echo('Choose tag(s)')
-    inputTag = click.prompt(click.style('[tag(s)] ', bold=True), default=e['tags'], type=click.Choice(tags))
-    e['tags'] = [int(inputTag)]
-    e['success'] = True
-    return e
+    if e['export'] is True:
+        e = unlockEntry(e)
+    if e['success'] is False:
+        return None
+    e['success'] = False
+    edit_json = {'title':e['title'], 'item/url*':e['note'],'username':e['username'], 'password':e['password'],'secret':e['safe_note'],'tags':e['tags']}
+    edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension=json)
+    if edit_json:
+        e['title'] = edit_json['title'];e['note'] = edit_json['item/url*'];e['username'] = edit_json['username'];e['password'] = edit_json['password']
+        e['secret'] = edit_json['safe_note']
+        e['tags'] = edit_json['tags']
+        e['success'] = True
+    return lockEntry(e)
 
-def editTag(t, tag_id):
+def editTag(t):
+    edit_json = click.edit(t)
     t['title'] = click.prompt('[title] ', default=t['title'])
     click.echo(iconsToString())
     t['icon'] = click.prompt(click.style('[tag(s)] ', bold=True), default=t['icon'], type=click.Choice(ICONS))
     return t
 
+# TODO print icons; get only from All if nothing else, call All=''
 def tabCompletionEntries(ctx, args, incomplete):
     loadConfig()
     loadStorage()
@@ -328,6 +325,7 @@ def tabCompletionEntries(ctx, args, incomplete):
             tabs.append(tags[t]['title'].lower() + '/' + selEntries[e]['note'].lower())
     return [k for k in tabs if incomplete.lower() in k]
 
+# TODO print icons
 def tabCompletionTags(ctx, args, incomplete, printEntries=False):
     loadConfig()
     loadStorage()
@@ -351,7 +349,7 @@ def cli():
 
     CLI for Trezor Password Manager inspired by pass\n
     Untested Beta Software! - Do not use it\n
-
+        
     @author: makk4 <manuel.kl900@gmail.com>\n
     version: 0.1.0\n
     https://github.com/makk4/tpass
@@ -368,34 +366,26 @@ def cli():
 def init(path, cloud, pinentry):
     '''Initialize new password storage'''
     global config
-
     if not os.path.exists(path):    
         os.makedirs(path)
-
     if len(os.listdir(path)) != 0:
         click.echo(path + ' is not empty, not initialized')
         exit(-1)
-
-    config = {'file_name': 'init', 'store_path': path, 'cloud_provider': cloud, 'pinentry': pinentry}
-
+    config['file_name'] = 'init'; config['store_path'] = path; config['cloud_provider'] = cloud; config['pinentry'] = pinentry
     if cloud == 'git':
         subprocess.call('init', cwd=config['store_path'], shell=True)
         click.echo('password store initialized with git in ' + path)
-        
-    if saveStorage():
-        writeConfig()
-        click.echo('Warining: /DEV/SHM not found on system, using not as secure TMP for metadata')
-        click.echo('password store initialized in ' + path)
-        exit(0)
-    else:
-        exit(-2)
+    saveStorage()
+    writeConfig()
+    click.echo('Warining: /DEV/SHM not found on system, using not as secure TMP for metadata')
+    click.echo('password store initialized in ' + path)
+    exit(0)
 
 @cli.command()
 @click.argument('name', type=click.STRING, nargs=1)
 def find(name):# TODO alias
     '''List names of passwords and tags that match names'''
-    es = {}
-    ts = {}
+    es = {}; ts = {}
     for e in entries:
         e = getEntry(e)[1]
         if name.lower() in e['title'].lower():
@@ -589,11 +579,10 @@ def insert(tag_name, entry_name, tag):
     '''Insert entry or tag'''
     global db_json
     if tag is True:
-        tag_id = getTag(tag_name)[0]
-        if tag_id:
+        if getTag(tag_name)[1]:
             sys.exit(-1)
         t = {'title': '', 'icon': ''}
-        t = editTag(t, tag_id)
+        t = editTag(t)
         saveTag(t)
         saveStorage()
     else:
@@ -609,12 +598,11 @@ def insert(tag_name, entry_name, tag):
 
         e = {'title': entry_name, 'username': '', 'password': '', 'nonce': '', 'tags': tag, 'safe_note': '', 'note': '', 'success': False, 'export': True}
         e = editEntry(e)
-        e = lockEntry(e)
         saveEntry(e)
         saveStorage()
     sys.exit(0)
 
-@cli.command()
+@cli.command()#TODO option --entry/--tag with default
 @click.argument('entry_name', type=click.STRING, default='', nargs=1, autocompletion=tabCompletionEntries)
 @click.option('-t', '--tag', type=click.STRING, default='', nargs=1, help='edit tag', autocompletion=tabCompletionTags)
 def edit(entry_name, tag):
@@ -625,7 +613,7 @@ def edit(entry_name, tag):
         t = t[1]
         if t is None:
             sys.exit(-1)
-        t = editTag(t, tag_id)
+        t = editTag(t)
         saveTag(t, tag_id)
         saveStorage()
     else:
@@ -634,9 +622,7 @@ def edit(entry_name, tag):
         if e is None:
             sys.exit(-1)
 
-        e = unlockEntry(e)
         e = editEntry(e)
-        e = lockEntry(e)
         saveEntry(e, entry_id)
         saveStorage()
     sys.exit(0)
