@@ -11,6 +11,7 @@ import pyperclip
 import time
 import pyotp
 import re
+
 ICONS = {'home': {'emoji': '🏠'}, 'person-stalker': {'emoji': '👩‍👩‍👦'}, 'social-bitcoin': {'emoji': '₿ '}, 'person': {'emoji': '😀'}, 'star': {'emoji': '⭐'}, 'flag': {'emoji': '🏳️'}, 'heart':{'emoji':'❤'}, 'settings': {'emoji':'⚙️'}, 'email':{'emoji':'✉️'},'cloud': {'emoji': '☁️'}, 'alert-circled': {'emoji':'⚠️'}, 'android-cart': {'emoji': '🛒'}, 'image': {'emoji': '🖼️'}, 'card': {'emoji': '💳'}, 'earth': {'emoji': '🌐'}, 'wifi': {'emoji': '📶'}}
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
@@ -170,6 +171,16 @@ def getTag(tag_name):
             return str(t), tags[t]
     return None, None
 
+def saveTag(tag, tag_id=None):
+    global db_json
+    if not tag_id:
+        for t in tags:
+            tag_id = str(int(t) + 1)
+    if tag:
+        db_json['tags'].update( {tag_id : tag} )
+    else:
+        click.echo('Error detected, aborted')
+
 def getEntriesByTag(tag_id):
     result = {}
     for e in entries:
@@ -211,6 +222,7 @@ def tagsToString(ts, includeIds=False):
             tags_str = tags_str + t + ': ' + i + '  ' + tag['title'] + '     '
         else:
             tags_str = tags_str + i + '  ' + tag['title'] + '  '
+    print(tags_str)
     return tags_str
 
 def iconsToString():
@@ -266,9 +278,13 @@ def lockEntry(e):
         raise Exception('Error while encrypting entry')
     return {'title': e['title'], 'username': e['username'], 'password': {'type': 'Buffer', 'data': pwd}, 'nonce': e['nonce'], 'tags': e['tags'], 'safe_note': {'type': 'Buffer', 'data': safeNote}, 'note': e['note'], 'success': True, 'export': False}
 
-def saveEntry(e, entry_id):
-    if e and e['success'] is True and e['export'] is False:
-        db_json['entries'].update( {entry_id : e} )
+def saveEntry(entry, entry_id=None):
+    global db_json
+    if not entry_id:
+        for e in entries:
+            entry_id = str(int(e) + 1)
+    if entry and entry['success'] is True and entry['export'] is False:
+        db_json['entries'].update( {entry_id : entry} )
         return True
     else:
         return False
@@ -292,15 +308,14 @@ def editEntry(e):
     click.echo(tagsToString(tags, True))
     click.echo('Choose tag(s)')
     inputTag = click.prompt(click.style('[tag(s)] ', bold=True), default=e['tags'], type=click.Choice(tags))
-    e['tags'] = inputTag
+    e['tags'] = [int(inputTag)]
     e['success'] = True
-    return lockEntry(e)
+    return e
 
 def editTag(t, tag_id):
     t['title'] = click.prompt('[title] ', default=t['title'])
     click.echo(iconsToString())
     t['icon'] = click.prompt(click.style('[tag(s)] ', bold=True), default=t['icon'], type=click.Choice(ICONS))
-    db_json['entries'].update( {tag_id : t} )
     return t
 
 def tabCompletionEntries(ctx, args, incomplete):
@@ -444,7 +459,6 @@ def cat(entry_name, secrets, json): # TODO alias
         e = unlockEntry(e)
         pwd = e['password']
         safeNote = e['safe_note']
-        
     if json:
         click.echo(e)
     else:
@@ -516,7 +530,7 @@ def generate(insert, typeof, clip, seperator, force, length):
                         if(not key in words):
                             words[key] = value
                         else:
-                            exit(-1)
+                            sys.exit(-1)
         except:
             click.echo('error while processing wordlist.txt file')
         pwd = cryptomodul.generatePassphrase(length, words, seperator)
@@ -533,6 +547,7 @@ def generate(insert, typeof, clip, seperator, force, length):
             return
         e = unlockEntry(e)
         e['password'] = pwd
+        e = lockEntry(e)
         if force or click.confirm('Insert password in entry ' + click.style(entries[entry_id]['title'], bold=True)):
             saveEntry(e, entry_id)
     if clip:
@@ -577,13 +592,13 @@ def insert(tag_name, entry_name, tag):
         tag_id = getTag(tag_name)[0]
         if tag_id:
             sys.exit(-1)
-        tag_id = '100'
         t = {'title': '', 'icon': ''}
-        editTag(t, tag_id)
+        t = editTag(t, tag_id)
+        saveTag(t)
         saveStorage()
     else:
         tag_id = getTag(tag_name)[0]
-        if tag_id is -1:
+        if tag_id is None:
             sys.exit(-1)
 
         if tag_name is not 'all' and getTag(tag_name)[1]:
@@ -591,13 +606,11 @@ def insert(tag_name, entry_name, tag):
             tag = [t]
         else:
             tag = []
-        entry_id = 0
-        for e in entries:
-            entry_id = int(e) + 1
 
         e = {'title': entry_name, 'username': '', 'password': '', 'nonce': '', 'tags': tag, 'safe_note': '', 'note': '', 'success': False, 'export': True}
         e = editEntry(e)
-        saveEntry(e, str(entry_id))
+        e = lockEntry(e)
+        saveEntry(e)
         saveStorage()
     sys.exit(0)
 
@@ -606,14 +619,14 @@ def insert(tag_name, entry_name, tag):
 @click.option('-t', '--tag', type=click.STRING, default='', nargs=1, help='edit tag', autocompletion=tabCompletionTags)
 def edit(entry_name, tag):
     '''Edit entry or tag'''
-    global db_json
     if tag:
         t = getTag(tag)
         tag_id = t[0]
         t = t[1]
         if t is None:
             sys.exit(-1)
-        editTag(t, tag_id)
+        t = editTag(t, tag_id)
+        saveTag(t, tag_id)
         saveStorage()
     else:
         entry_id = getEntry(entry_name)[0]
@@ -623,6 +636,7 @@ def edit(entry_name, tag):
 
         e = unlockEntry(e)
         e = editEntry(e)
+        e = lockEntry(e)
         saveEntry(e, entry_id)
         saveStorage()
     sys.exit(0)
@@ -638,8 +652,6 @@ def git(commands):
 @click.argument('argument', type=click.Choice(['reset', 'edit']), nargs=1, autocompletion=tabCompletionEntries)
 def conf(argument):
     '''Configuration settings'''
-    global config
-    db_file = os.path.join(config['store_path'], config['file_name'])
     if argument == 'reset':
         if os.path.isfile(CONFIG_FILE):
             os.remove(CONFIG_FILE)

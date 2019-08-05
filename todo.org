@@ -1,7 +1,7 @@
 * Basic features
 ** TODO Entry operations
 *** DONE edit
-*** TODO insert
+*** DONE insert
 *** DONE remove
 ** DONE Icons
 ** DONE findEntrieById Bug
@@ -48,6 +48,8 @@
 * Optional
 ** TODO totp
 
+* Bugs
+** lockEntry, editEntry -> pwd + safNote not got encrypted
 https://click.palletsprojects.com/en/7.x/bashcomplete/
 
 eval "$(_TPASS_COMPLETE=source tpass)"
