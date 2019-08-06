@@ -51,39 +51,21 @@ def writeConfig():
         os.mkdir(CONFIG_PATH)
     with open(CONFIG_FILE, 'w', encoding='utf8') as f:
         json.dump(config, f, indent=4)
-
-def loadStorage():
-    global entries
-    global tags
-    tmp_path = DEV_SHM
-    if not os.path.exists(DEV_SHM):
-        tmp_path = TMP
-    tmp_file = os.path.join(tmp_path, config['file_name'] + '.json')
-    if (os.path.isfile(tmp_file)):
-        with open(tmp_file) as f:
-            db_json = json.load(f)
-            entries = db_json['entries']
-            tags = db_json['tags']
  
 def unlockStorage():
     global db_json
     global entries
     global tags
     db_file = os.path.join(config['store_path'], config['file_name'])
-    tmp_path = DEV_SHM
 
-    if config['file_name'] is '':
-        return -1
-
-    if not os.path.isfile(db_file):
-        return -2
-
-    if not os.path.exists(DEV_SHM):
-        click.echo('warning: /dev/shm not found on host, using not as secure /tmp/ for plain metadata')
-        tmp_path = TMP
-
-    tmp_file = os.path.join(tmp_path, config['file_name'] + '.json')
-    if not os.path.isfile(tmp_file) or (os.path.isfile(tmp_file) and (os.path.getmtime(tmp_file) < os.path.getmtime(db_file))):
+    if config['file_name'] is '' or not os.path.isfile(db_file):
+        return False
+    if config['storeMetaDataOnDisk'] is True:
+        tmp_path = DEV_SHM
+        tmp_file = os.path.join(tmp_path, config['file_name'] + '.json')
+        if not os.path.exists(DEV_SHM):
+            click.echo('warning: /dev/shm not found on host, using not as secure /tmp/ for plain metadata')
+    if config['storeMetaDataOnDisk'] is False or not os.path.isfile(tmp_file) or (os.path.isfile(tmp_file) and (os.path.getmtime(tmp_file) < os.path.getmtime(db_file))):
         click.echo('unlocking storage')
         getClient()
         try:
@@ -93,17 +75,17 @@ def unlockStorage():
             sys.exit(-1)
         config['file_name'] = keys[0]
         db_file = os.path.join(config['store_path'], config['file_name'])
-        tmp_file = os.path.join(tmp_path, config['file_name'] + '.json')
         db_json = cryptomodul.decryptStorage(db_file, keys)
-
-        with open(tmp_file, 'w') as f:  
-            json.dump(db_json, f)
-
-    with open(tmp_file) as f:
-        db_json = json.load(f)
-    entries = db_json['entries']
-    tags = db_json['tags']
-    return 0
+        entries = db_json['entries']
+        tags = db_json['tags']
+        if config['storeMetaDataOnDisk'] is True:
+            with open(tmp_file, 'w') as f:  
+                json.dump(db_json, f)
+        
+            tmp_path = TMP
+    if config['storeMetaDataOnDisk'] is True:
+        with open(tmp_file) as f:
+            db_json = json.load(f)
 
 def saveStorage():
     global config
@@ -128,7 +110,7 @@ def saveStorage():
     except:
         raise Exception('Encryption gone wrong')
 
-    if os.path.isfile(db_file):
+    if config['storeMetaDataOnDisk'] is True and os.path.isfile(db_file):
         with open(tmp_file, 'w') as f:
             json.dump(db_json, f)
     
@@ -155,14 +137,19 @@ def getClient():
         except:
             click.echo('Error while accessing trezor device')
 
-def getEntry(entry_name):
-    if '/' in entry_name:
-        entry_name = entry_name.split('/')[1]
+def parseName(input_str):
+    if '/' in input_str:
+        tag = input_str.split('/')[0]
+        titleOrNote = input_str.split('/')[1]
+    if ':' in input_str:
+        username = input_str.split(':')[1]
+    return tag, titleOrNote, username
+
+def getEntry(titleOrNote,username=None):
     for e in entries:
-        if entry_name.lower() == entries[e]['title'].lower():
-            return str(e), entries[e]
-        elif entry_name.lower() == entries[e]['note'].lower():
-            return str(e), entries[e]
+        if titleOrNote.lower() == entries[e]['title'].lower() or titleOrNote.lower() == entries[e]['note'].lower():
+            if username.lower() == entries[e]['username'].lower() or username is None:
+                return str(e), entries[e]
     return None, None
 
 def getTag(tag_name):
@@ -174,7 +161,7 @@ def getTag(tag_name):
 
 def saveTag(tag, tag_id=None):
     global db_json
-    if not tag_id:
+    if tag_id is None:
         for t in tags:
             tag_id = str(int(t) + 1)
     if tag:
@@ -234,15 +221,14 @@ def iconsToString():
     return icon_str
 
 def unlockEntry(e):
-    if e is None or e['success'] is not True:
+    if e is None or e['success'] is False or e['export'] is True:
         return None
     e['success'] = False
     e['export'] = True
     pwd = e['password']['data']
     safeNote = e['safe_note']['data']
-
-    getClient()
     try:   
+        getClient()
         keys = trezorapi.getTrezorKeys(client)
         plain_nonce = trezorapi.getDecryptedNonce(client, e)
     except:
@@ -250,23 +236,21 @@ def unlockEntry(e):
         click.error('Error while accessing trezor device')
     try:
         pwd = cryptomodul.decryptEntryValue(plain_nonce, pwd)
-        e['safe_note'] = cryptomodul.decryptEntryValue(plain_nonce, safeNote)
+        safeNote = cryptomodul.decryptEntryValue(plain_nonce, safeNote)
     except:
         pass
-    e['success'] = True
-    return {'title': e['title'], 'username': e['username'], 'password': pwd, 'nonce': e['nonce'], 'tags': e['tags'], 'safe_note': e['safe_note'], 'note': e['note'], 'success': True, 'export': True}
-
+    return {'title': e['title'], 'username': e['username'], 'password': pwd, 'nonce': e['nonce'], 'tags': e['tags'], 'safe_note': safeNote, 'note': e['note'], 'success': True, 'export': True}
 
 def lockEntry(e): 
-    if e is None or e['success'] is not True:
+    if e is None or e['success'] is False or e['export'] is False:
         return None
     e['success'] = False
     e['export'] = False
     pwd = e['password']
     safeNote = e['safe_note']
 
-    getClient()
     try:
+        getClient()
         keys = trezorapi.getTrezorKeys(client)
         e['nonce'] = trezorapi.getEncryptedNonce(client, e)
         plain_nonce = trezorapi.getDecryptedNonce(client, e)
@@ -280,7 +264,7 @@ def lockEntry(e):
         raise Exception('Error while encrypting entry')
     return {'title': e['title'], 'username': e['username'], 'password': {'type': 'Buffer', 'data': pwd}, 'nonce': e['nonce'], 'tags': e['tags'], 'safe_note': {'type': 'Buffer', 'data': safeNote}, 'note': e['note'], 'success': True, 'export': False}
 
-def saveEntry(entry, entry_id=None):
+def insertEntry(entry, entry_id=None):
     global db_json
     if not entry_id:
         for e in entries:
@@ -317,7 +301,7 @@ def editTag(t):
 # TODO print icons; get only from All if nothing else, call All=''
 def tabCompletionEntries(ctx, args, incomplete):
     loadConfig()
-    loadStorage()
+    unlockStorage()
     tabs = []
     for t in tags:
         selEntries = getEntriesByTag(t)
@@ -328,7 +312,7 @@ def tabCompletionEntries(ctx, args, incomplete):
 # TODO print icons
 def tabCompletionTags(ctx, args, incomplete, printEntries=False):
     loadConfig()
-    loadStorage()
+    unlockStorage()
     tabs = []
     for t in tags:
         tabs.append(tags[t]['title'].lower() + '/')
@@ -539,7 +523,7 @@ def generate(insert, typeof, clip, seperator, force, length):
         e['password'] = pwd
         e = lockEntry(e)
         if force or click.confirm('Insert password in entry ' + click.style(entries[entry_id]['title'], bold=True)):
-            saveEntry(e, entry_id)
+            insertEntry(e, entry_id)
     if clip:
         pyperclip.copy(pwd)
         clearClipboard()
@@ -598,7 +582,7 @@ def insert(tag_name, entry_name, tag):
 
         e = {'title': entry_name, 'username': '', 'password': '', 'nonce': '', 'tags': tag, 'safe_note': '', 'note': '', 'success': False, 'export': True}
         e = editEntry(e)
-        saveEntry(e)
+        insertEntry(e)
         saveStorage()
     sys.exit(0)
 
@@ -623,7 +607,7 @@ def edit(entry_name, tag):
             sys.exit(-1)
 
         e = editEntry(e)
-        saveEntry(e, entry_id)
+        insertEntry(e, entry_id)
         saveStorage()
     sys.exit(0)
 

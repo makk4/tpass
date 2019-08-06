@@ -20,6 +20,7 @@
 ** DONE unit tests
 *** DONE emulator
 ** DONE Wordlist to txt
+** DONE support for same filenames? Look at trezor implementation - define key values
 ** DONE entry encryption
 *** DONE how get Nonce of entry -> random
 *** DONE correct data structure
@@ -32,7 +33,6 @@
 ** TODO support for case sensitive Names
 *** TODO tab completion
 *** TODO getters and find
-** TODO support for same filenames? Look at trezor implementation - define key values
 ** TODO return values and input of getters in() str() ? --> ids
 ** TODO switch to poetry
 ** TODO ask for password
