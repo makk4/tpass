@@ -134,8 +134,8 @@ def decryptMasterKey(client):
     return key.hex()
 
 def getEntropy(client, length):
-    trezor_entropy = misc.get_entropy(client, length/2)
-    urandom_entropy = os.urandom(length/2)
+    trezor_entropy = misc.get_entropy(client, length)
+    urandom_entropy = os.urandom(length)
     entropy = hashlib.sha256(trezor_entropy + urandom_entropy).digest()
     if len(entropy) != length:
         raise ValueError(length + ' bytes entropy expected')

@@ -45,6 +45,7 @@
 *** TODO entries
 ** TODO click aliase
 ** TODO configParser
+** TODO saveOnDisk
  
 * Optional
 ** TODO totp

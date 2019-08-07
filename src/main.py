@@ -286,9 +286,13 @@ def editEntry(e):
     e['success'] = False
     edit_json = {'title':e['title'], 'item/url*':e['note'],'username':e['username'], 'password':e['password'],'secret':e['safe_note'],'tags':e['tags']}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True)
+    edit_json = json.loads(edit_json)
     if edit_json:
-        e['title'] = edit_json['title'];e['note'] = edit_json['item/url*'];e['username'] = edit_json['username'];e['password'] = edit_json['password']
-        e['secret'] = edit_json['safe_note']
+        e['title'] = edit_json['title']
+        e['note'] = edit_json['item/url*']
+        e['username'] = edit_json['username']
+        e['password'] = edit_json['password']
+        e['safe_note'] = edit_json['secret']
         e['tags'] = edit_json['tags']
         e['success'] = True
         return lockEntry(e)
@@ -394,6 +398,7 @@ def find(name):# TODO alias
     printTags(ts)
     sys.exit(0)
 
+@cli.command()
 def grep(name):
     '''Search for pattern in decrypted entries'''
     for e in entries:
@@ -430,7 +435,7 @@ def ls(tag_name):# TODO alias
 @click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 @click.option('-s', '--secrets', is_flag=True, help='show password and secret notes')
 @click.option('-j', '--json', is_flag=True, help='json format')
-def cat(entry_name, secrets, json): # TODO alias
+def show(entry_name, secrets, json): # TODO alias
     '''Decrypt and print an entry'''
     entry_name = parseName(entry_name)
     e = getEntry(entry_name[1], entry_name[2])[1]
@@ -586,17 +591,15 @@ def insert(tag_name, entry_name, tag):
             saveTag(t)
             saveStorage()
     else:
-        tag_id = getTag(tag_name)[0]
-        if tag_id is None:
-            sys.exit(-1)
-
-        if tag_name is not 'all' and getTag(tag_name)[1]:
-            t = getTag(tag_name)[0]
-            tag = [t]
+        if tag_name != '':
+            t = getTag(tag_name)
+            if t[1] is None:
+                sys.exit(-1)
+            tag = [t[0]]
         else:
             tag = []
 
-        e = {'title': entry_name, 'username': '', 'password': '', 'nonce': '', 'tags': tag, 'safe_note': '', 'note': '', 'success': False, 'export': True}
+        e = {'title': entry_name, 'username': '', 'password': '', 'nonce': '', 'tags': tag, 'safe_note': '', 'note': '', 'success': True, 'export': True}
         e = editEntry(e)
         insertEntry(e)
         saveStorage()
@@ -642,8 +645,8 @@ def git(commands):
 @click.argument('setting_name', type=click.STRING, default='', nargs=1, autocompletion=tabCompletionConfig)
 @click.argument('setting_value', type=click.STRING, default='None', nargs=1)
 def conf(edit, reset, setting_name, setting_value):
-    global config
     '''Configuration settings'''
+    global config
     if edit:
         click.edit(filename=CONFIG_FILE, require_save=True)
     elif reset:
