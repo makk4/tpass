@@ -72,12 +72,14 @@ def unlockStorage():
             getClient()
             keys = trezorapi.getTrezorKeys(client)
         except:
-            click.echo('Error while getting keys from device')
-            sys.exit(-1)
+            raise Exception('Error while getting keys from device')
         config['file_name'] = keys[0]
 
         db_file = os.path.join(config['store_path'], config['file_name'])
-        db_json = cryptomodul.decryptStorage(db_file, keys)
+        try:
+            db_json = cryptomodul.decryptStorage(db_file, keys)
+        except:
+            raise Exception('Error while decrypting storage')
         entries = db_json['entries']
         tags = db_json['tags']
 
@@ -102,18 +104,18 @@ def saveStorage():
         tmp_file = TMP
     try:
         keys = trezorapi.getTrezorKeys(client)
-        fileName = keys[0]
-        tmp_file = os.path.join(tmp_file, fileName + '.json')
-        config['file_name'] = fileName
     except:
-        click.echo('Error while accessing trezor device')
-
+        raise Exception('Error while accessing trezor device')
+        
+    fileName = keys[0]
+    tmp_file = os.path.join(tmp_file, fileName + '.json')
+    config['file_name'] = fileName
     db_file = os.path.join(config['store_path'], config['file_name'])
 
     try:
         cryptomodul.encryptStorage(db_json, db_file, keys)
     except:
-        raise Exception('Encryption gone wrong')
+        raise Exception('Error while encrypting storage')
 
     if config['storeMetaDataOnDisk'] is True and os.path.isfile(db_file):
         with open(tmp_file, 'w') as f:
@@ -140,19 +142,20 @@ def getClient():
         try:
             client = trezorapi.getTrezorClient()
         except:
-            click.echo('Error while accessing trezor device')
+            raise Exception('Error while accessing trezor device')
 
 def parseName(input_str):
     if '/' in input_str:
         tag = input_str.split('/')[0]
         titleOrNote = input_str.split('/')[1]
     if ':' in input_str:
+        titleOrNote = input_str.split('/')[1].split(':')[0]
         username = input_str.split(':')[1]
     return tag, titleOrNote, username
 
 def getEntry(titleOrNote,username=None):
     for e in entries:
-        if titleOrNote.lower() == entries[e]['title'].lower() or entries[e]['title'].lower() == entries[e]['note'].lower():
+        if titleOrNote.lower() == entries[e]['title'].lower() or titleOrNote.lower() == entries[e]['note'].lower():
             if username.lower() == entries[e]['username'].lower() or username is None:
                 return str(e), entries[e]
     return None, None
@@ -216,7 +219,6 @@ def tagsToString(ts, includeIds=False):
             tags_str = tags_str + t + ': ' + i + '  ' + tag['title'] + '     '
         else:
             tags_str = tags_str + i + '  ' + tag['title'] + '  '
-    print(tags_str)
     return tags_str
 
 def iconsToString():
@@ -226,6 +228,7 @@ def iconsToString():
     return icon_str
 
 def unlockEntry(e):
+    print(e)
     if e is None or e['success'] is False or e['export'] is True:
         return None
     e['success'] = False
@@ -236,13 +239,14 @@ def unlockEntry(e):
         getClient()
         keys = trezorapi.getTrezorKeys(client)
         plain_nonce = trezorapi.getDecryptedNonce(client, e)
+        print('plain_nonce: ' + plain_nonce)
     except:
-        click.echo('Error while accessing trezor device')
+        raise Exception('Error while accessing trezor device')
     try:
         pwd = cryptomodul.decryptEntryValue(plain_nonce, pwd)
         safeNote = cryptomodul.decryptEntryValue(plain_nonce, safeNote)
     except:
-        click.echo('Error while encrypting entry')
+        raise Exception('Error while decrypting entry')
     return {'title': e['title'], 'username': e['username'], 'password': pwd, 'nonce': e['nonce'], 'tags': e['tags'], 'safe_note': safeNote, 'note': e['note'], 'success': True, 'export': True}
 
 def lockEntry(e): 
@@ -258,11 +262,11 @@ def lockEntry(e):
     try:
         getClient()
         keys = trezorapi.getTrezorKeys(client)
-        e['nonce'] = trezorapi.getEncryptedNonce(client, e)
+        nonce = trezorapi.getEncryptedNonce(client, e)
+        e['nonce'] = nonce
         plain_nonce = trezorapi.getDecryptedNonce(client, e)
     except:
         raise Exception('Error while accessing trezor device')
-
     try:
         pwd = cryptomodul.encryptEntryValue(str(pwd), str(plain_nonce))
         safeNote = cryptomodul.encryptEntryValue(str(safeNote), str(plain_nonce))
@@ -274,15 +278,16 @@ def lockEntry(e):
 
 def insertEntry(entry, entry_id=None):
     global db_json
+    global entries
+
     if not entry_id:
         for e in entries:
             entry_id = str(int(e) + 1)
     if entry and entry['success'] is True and entry['export'] is False:
-        db_json['entries'].update( {entry_id : entry} )
+        entries.update( {entry_id : entry} )
         return True
     else:
-        return False
-        click.echo('Error detected, aborted')
+        raise Exception('Error detected while inserting Entry, aborted')
 
 def editEntry(e):
     if e['export'] is False:
@@ -291,8 +296,11 @@ def editEntry(e):
         return None
     e['success'] = False
     edit_json = {'title':e['title'], 'item/url*':e['note'],'username':e['username'], 'password':e['password'],'secret':e['safe_note'],'tags':e['tags']}
-    edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True)
-    edit_json = json.loads(edit_json)
+    try:
+        edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True)
+        edit_json = json.loads(edit_json)
+    except:
+        raise IOError('edit gone wrong')
     if edit_json:
         e['title'] = edit_json['title']
         e['note'] = edit_json['item/url*']
@@ -301,12 +309,16 @@ def editEntry(e):
         e['safe_note'] = edit_json['secret']
         e['tags'] = edit_json['tags']
         e['success'] = True
+        e['export'] = True
         return lockEntry(e)
     e['success'] = True
-    return e
+    return None
 
 def editTag(t):
-    edited_json = click.edit(json.dumps(t, indent=4), require_save=True)
+    try:
+        edited_json = click.edit(json.dumps(t, indent=4), require_save=True)
+    except:
+        raise IOError('edit gone wrong')
     if edited_json:
         t['title'] = edited_json['title']
         t['icon'] = edited_json['icon']
@@ -389,11 +401,7 @@ def find(name):# TODO alias
     es = {}; ts = {}
     for e in entries:
         e = getEntry(e)[1]
-        if name.lower() in e['title'].lower():
-            es[str(e)] = e
-        elif name.lower() in e['note'].lower():
-            es[str(e)] = e
-        elif name.lower() in e['username'].lower():
+        if name.lower() in e['title'].lower() or name.lower() in e['note'].lower() or name.lower() in e['username'].lower():
             es[str(e)] = e
     for t in tags:
         t = getTag(t)[1]
@@ -446,6 +454,7 @@ def show(entry_name, secrets, json): # TODO alias
     '''Decrypt and print an entry'''
     unlockStorage()
     entry_name = parseName(entry_name)
+    print(entry_name[1] + ' ' + entry_name[2])
     e = getEntry(entry_name[1], entry_name[2])[1]
     if e is None:
         return

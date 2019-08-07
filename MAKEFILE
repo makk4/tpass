@@ -14,5 +14,6 @@ test: clean-pyc
     py.test --verbose --color=yes $(TEST_PATH)
 
 install:
+    source env/bin/activate
     pip3 install --editable .
     eval "$(_TPASS_COMPLETE=source_zsh tpass)"
