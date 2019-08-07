@@ -43,7 +43,6 @@ def loadConfig():
     if 'file_name' not in config or 'store_path' not in config or 'pinentry' not in config:
         click.echo('config error: ' + CONFIG_PATH)
         sys.exit(-1)
-    
     return 0
 
 def writeConfig():
@@ -66,8 +65,9 @@ def unlockStorage():
     if not os.path.exists(DEV_SHM):
         click.echo('warning: /dev/shm not found on host, using not as secure /tmp/ for plain metadata')
         tmp_file = os.path.join(TMP, config['file_name'] + '.json')
-
-    if not os.path.isfile(tmp_file) or (os.path.isfile(tmp_file) and (os.path.getmtime(tmp_file) < os.path.getmtime(db_file))):
+    cond_old_tmp_file = not os.path.isfile(tmp_file) or (os.path.isfile(tmp_file) and (os.path.getmtime(tmp_file) < os.path.getmtime(db_file)))
+    cond_not_saving = config['storeMetaDataOnDisk'] is False
+    if cond_not_saving or cond_old_tmp_file:
         try:
             getClient()
             keys = trezorapi.getTrezorKeys(client)
@@ -80,13 +80,16 @@ def unlockStorage():
         db_json = cryptomodul.decryptStorage(db_file, keys)
         entries = db_json['entries']
         tags = db_json['tags']
-        with open(tmp_file, 'w') as f:  
-            json.dump(db_json, f)
 
-    with open(tmp_file) as f:
-        db_json = json.load(f)
-        entries = db_json['entries']
-        tags = db_json['tags']
+        if config['storeMetaDataOnDisk'] is True:
+            with open(tmp_file, 'w') as f:  
+                json.dump(db_json, f)
+
+    if config['storeMetaDataOnDisk'] is True:
+        with open(tmp_file) as f:
+            db_json = json.load(f)
+            entries = db_json['entries']
+            tags = db_json['tags']
 
 
 def saveStorage():
@@ -234,13 +237,12 @@ def unlockEntry(e):
         keys = trezorapi.getTrezorKeys(client)
         plain_nonce = trezorapi.getDecryptedNonce(client, e)
     except:
-        pass
-        click.error('Error while accessing trezor device')
+        click.echo('Error while accessing trezor device')
     try:
         pwd = cryptomodul.decryptEntryValue(plain_nonce, pwd)
         safeNote = cryptomodul.decryptEntryValue(plain_nonce, safeNote)
     except:
-        pass
+        click.echo('Error while encrypting entry')
     return {'title': e['title'], 'username': e['username'], 'password': pwd, 'nonce': e['nonce'], 'tags': e['tags'], 'safe_note': safeNote, 'note': e['note'], 'success': True, 'export': True}
 
 def lockEntry(e): 
@@ -250,6 +252,8 @@ def lockEntry(e):
     e['export'] = False
     pwd = e['password']
     safeNote = e['safe_note']
+    print(pwd)
+    print(safeNote)
 
     try:
         getClient()
@@ -262,8 +266,10 @@ def lockEntry(e):
     try:
         pwd = cryptomodul.encryptEntryValue(str(pwd), str(plain_nonce))
         safeNote = cryptomodul.encryptEntryValue(str(safeNote), str(plain_nonce))
+        print(pwd)
+        print(safeNote)
     except:
-        raise Exception('Error while encrypting entry')
+        raise Exception('Error while decrypting entry')
     return {'title': e['title'], 'username': e['username'], 'password': {'type': 'Buffer', 'data': pwd}, 'nonce': e['nonce'], 'tags': e['tags'], 'safe_note': {'type': 'Buffer', 'data': safeNote}, 'note': e['note'], 'success': True, 'export': False}
 
 def insertEntry(entry, entry_id=None):
@@ -352,7 +358,6 @@ def cli():
     '''
 
     loadConfig()
-    unlockStorage()
     pass
 
 @cli.command()
@@ -373,7 +378,6 @@ def init(path, cloud, pinentry):
         click.echo('password store initialized with git in ' + path)
     saveStorage()
     writeConfig()
-    click.echo('Warining: /DEV/SHM not found on system, using not as secure TMP for metadata')
     click.echo('password store initialized in ' + path)
     exit(0)
 
@@ -381,6 +385,7 @@ def init(path, cloud, pinentry):
 @click.argument('name', type=click.STRING, nargs=1)
 def find(name):# TODO alias
     '''List names of passwords and tags that match names'''
+    unlockStorage()
     es = {}; ts = {}
     for e in entries:
         e = getEntry(e)[1]
@@ -401,6 +406,7 @@ def find(name):# TODO alias
 @cli.command()
 def grep(name):
     '''Search for pattern in decrypted entries'''
+    unlockStorage()
     for e in entries:
         e = unlockEntry(entries[e])
         if name.lower() in e['title'].lower():
@@ -419,6 +425,7 @@ def grep(name):
 @click.argument('tag_name', default='', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
 def ls(tag_name):# TODO alias
     '''List names of passwords from tag'''
+    unlockStorage()
     ts = {}
     if tag_name == '':
         ts = tags
@@ -437,6 +444,7 @@ def ls(tag_name):# TODO alias
 @click.option('-j', '--json', is_flag=True, help='json format')
 def show(entry_name, secrets, json): # TODO alias
     '''Decrypt and print an entry'''
+    unlockStorage()
     entry_name = parseName(entry_name)
     e = getEntry(entry_name[1], entry_name[2])[1]
     if e is None:
@@ -478,11 +486,11 @@ def show(entry_name, secrets, json): # TODO alias
 @click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
     '''Decrypt and copy line of entry to clipboard'''
+    unlockStorage()
     entry_name = parseName(entry_name)
     e = getEntry(entry_name[1], entry_name[2])[1]
     if e is None:
         sys.exit(-1)
-
     if user:
         pyperclip.copy(e['username'])
     elif url:
@@ -494,8 +502,6 @@ def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
         else:
             pyperclip.copy(secrets[0])
         clearClipboard()
-    
-    #click.launch('https://www.' + e['title'])
     sys.exit(0)
     
 @cli.command()
@@ -507,6 +513,7 @@ def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
 @click.option('-f', '--force', is_flag=True, help='force without confirmation')
 def generate(insert, typeof, clip, seperator, force, length):
     '''Generate new password'''
+    unlockStorage()
     global db_json
     if (length < 6 and typeof is 'password') or (length < 3 and typeof is 'wordlist') or (length < 4 and typeof is 'pin'):
         click.echo(length + ' is too short for password with type ' + typeof)
@@ -557,6 +564,7 @@ def generate(insert, typeof, clip, seperator, force, length):
 @click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 def rm(entry_name, tag, force):# TODO alias
     '''Remove entry or tag'''
+    unlockStorage()
     global db_json
     if tag:
         tag_id = getTag(tag)[0]
@@ -581,6 +589,7 @@ def rm(entry_name, tag, force):# TODO alias
 @click.option('--tag', '-t', is_flag=True, help='insert tag')
 def insert(tag_name, entry_name, tag):
     '''Insert entry or tag'''
+    unlockStorage()
     global db_json
     if tag is True:
         if getTag(tag_name)[1]:
@@ -610,6 +619,7 @@ def insert(tag_name, entry_name, tag):
 @click.option('-t', '--tag', type=click.STRING, default='', nargs=1, help='edit tag', autocompletion=tabCompletionTags)
 def edit(entry_name, tag):
     '''Edit entry or tag'''
+    unlockStorage()
     if tag:
         t = getTag(tag)
         tag_id = t[0]
@@ -622,8 +632,9 @@ def edit(entry_name, tag):
             saveStorage()
     else:
         entry_name = parseName(entry_name)
-        entry_id = getEntry(entry_name[1], entry_name[2])[0]
-        e = getEntry(entry_name[1], entry_name[2])[1]
+        e = getEntry(entry_name[1], entry_name[2])
+        entry_id = e[0]
+        e = e[1]
         if e is None:
             sys.exit(-1)
 
@@ -657,10 +668,24 @@ def conf(edit, reset, setting_name, setting_value):
     sys.exit(0)
 
 @cli.command()
+@click.option('-f', '--force', is_flag=True, help='omnit dialog')
+def unlock(force):
+    '''Unlock Storage and writes plain metadata to disk'''
+    if force or click.confirm('Unlock storage?'):
+        unlock()
+    sys.exit(0)
+
+@cli.command()
 def lock():
     '''Remove Plain Metadata file from disk'''
-    os.remove(os.path.join(TMP, config['file_name'] + '.json'))
-    os.remove(os.path.join(DEV_SHM, config['file_name'] + '.json'))
+    tmp_file = os.path.join(DEV_SHM, config['file_name'])
+    if not os.path.exists(DEV_SHM):
+        tmp_file = os.path.join(TMP, config['file_name'] + '.json')
+    if os.path.isfile(tmp_file):
+        os.remove(tmp_file)
+        click.echo(click.style('metadata deleted: ', bold=True) + tmp_file)
+    else:
+        click.echo(click.style('nothing to delete', bold=True)) 
     sys.exit(0)
 
 # TODO CSV
@@ -671,6 +696,7 @@ def lock():
 @cli.command()
 def exportdb(tag_name, entry_name, path, fileformat):
     '''Export data base'''
+    unlockStorage()
     if fileformat == 'json':
         with click.progressbar(entries, label='Exporting DB', show_eta=False, fill_char='#', empty_char='-') as bar:
             for e in bar:
@@ -684,6 +710,20 @@ def exportdb(tag_name, entry_name, path, fileformat):
 @click.option('-p', '--path', type=click.Path(), help='path to import file')
 def importdb(es):
     '''Import data base'''
+    unlockStorage()
     for e in es:
         lockEntry(e)
     sys.exit(0)
+
+
+def test():
+    e = getEntry()
+    e = unlockEntry(e)
+    e = lockEntry(e)
+    e = unlockEntry(e)
+    e = lockEntry(e)
+    e = unlockEntry(e)
+    e = lockEntry(e)
+    e = unlockEntry(e)
+    e = lockEntry(e)
+    return
