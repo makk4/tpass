@@ -58,34 +58,36 @@ def unlockStorage():
     global tags
     db_file = os.path.join(config['store_path'], config['file_name'])
 
-    if config['file_name'] is '' or not os.path.isfile(db_file):
-        return False
-    if config['storeMetaDataOnDisk'] is True:
-        tmp_path = DEV_SHM
-        tmp_file = os.path.join(tmp_path, config['file_name'] + '.json')
-        if not os.path.exists(DEV_SHM):
-            click.echo('warning: /dev/shm not found on host, using not as secure /tmp/ for plain metadata')
-    if config['storeMetaDataOnDisk'] is False or not os.path.isfile(tmp_file) or (os.path.isfile(tmp_file) and (os.path.getmtime(tmp_file) < os.path.getmtime(db_file))):
-        click.echo('unlocking storage')
-        getClient()
+    if config['file_name'] == '' or not os.path.isfile(db_file):
+        sys.exit(-1)
+    tmp_path = DEV_SHM
+    tmp_file = os.path.join(tmp_path, config['file_name'] + '.json')
+
+    if not os.path.exists(DEV_SHM):
+        click.echo('warning: /dev/shm not found on host, using not as secure /tmp/ for plain metadata')
+        tmp_file = os.path.join(TMP, config['file_name'] + '.json')
+
+    if not os.path.isfile(tmp_file) or (os.path.isfile(tmp_file) and (os.path.getmtime(tmp_file) < os.path.getmtime(db_file))):
         try:
+            getClient()
             keys = trezorapi.getTrezorKeys(client)
         except:
             click.echo('Error while getting keys from device')
             sys.exit(-1)
         config['file_name'] = keys[0]
+
         db_file = os.path.join(config['store_path'], config['file_name'])
         db_json = cryptomodul.decryptStorage(db_file, keys)
         entries = db_json['entries']
         tags = db_json['tags']
-        if config['storeMetaDataOnDisk'] is True:
-            with open(tmp_file, 'w') as f:  
-                json.dump(db_json, f)
-        
-            tmp_path = TMP
-    if config['storeMetaDataOnDisk'] is True:
-        with open(tmp_file) as f:
-            db_json = json.load(f)
+        with open(tmp_file, 'w') as f:  
+            json.dump(db_json, f)
+
+    with open(tmp_file) as f:
+        db_json = json.load(f)
+        entries = db_json['entries']
+        tags = db_json['tags']
+
 
 def saveStorage():
     global config
@@ -147,7 +149,7 @@ def parseName(input_str):
 
 def getEntry(titleOrNote,username=None):
     for e in entries:
-        if titleOrNote.lower() == entries[e]['title'].lower() or titleOrNote.lower() == entries[e]['note'].lower():
+        if titleOrNote.lower() == entries[e]['title'].lower() or entries[e]['title'].lower() == entries[e]['note'].lower():
             if username.lower() == entries[e]['username'].lower() or username is None:
                 return str(e), entries[e]
     return None, None
@@ -183,7 +185,7 @@ def getEntriesByTag(tag_id):
 
 def printEntries(es):
     for e in es:
-        click.echo(es[e]['title'])
+        click.echo(es[e]['title'] + ':' + es[e]['username'])
 
 def printTags(ts, includeEntries=False):
     tag_str = ''
@@ -277,26 +279,30 @@ def insertEntry(entry, entry_id=None):
         click.echo('Error detected, aborted')
 
 def editEntry(e):
-    if e['export'] is True:
+    if e['export'] is False:
         e = unlockEntry(e)
     if e['success'] is False:
         return None
     e['success'] = False
     edit_json = {'title':e['title'], 'item/url*':e['note'],'username':e['username'], 'password':e['password'],'secret':e['safe_note'],'tags':e['tags']}
-    edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension=json)
+    edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True)
     if edit_json:
         e['title'] = edit_json['title'];e['note'] = edit_json['item/url*'];e['username'] = edit_json['username'];e['password'] = edit_json['password']
         e['secret'] = edit_json['safe_note']
         e['tags'] = edit_json['tags']
         e['success'] = True
-    return lockEntry(e)
+        return lockEntry(e)
+    e['success'] = True
+    return e
 
 def editTag(t):
-    edit_json = click.edit(t)
-    t['title'] = click.prompt('[title] ', default=t['title'])
-    click.echo(iconsToString())
-    t['icon'] = click.prompt(click.style('[tag(s)] ', bold=True), default=t['icon'], type=click.Choice(ICONS))
-    return t
+    edited_json = click.edit(json.dumps(t, indent=4), require_save=True)
+    if edited_json:
+        t['title'] = edited_json['title']
+        t['icon'] = edited_json['icon']
+        return t
+    else:
+        return None
 
 # TODO print icons; get only from All if nothing else, call All=''
 def tabCompletionEntries(ctx, args, incomplete):
@@ -306,11 +312,11 @@ def tabCompletionEntries(ctx, args, incomplete):
     for t in tags:
         selEntries = getEntriesByTag(t)
         for e in selEntries:
-            tabs.append(tags[t]['title'].lower() + '/' + selEntries[e]['note'].lower())
+            tabs.append(tags[t]['title'].lower() + '/' + selEntries[e]['note'].lower() + ':' + selEntries[e]['username'])
     return [k for k in tabs if incomplete.lower() in k]
 
 # TODO print icons
-def tabCompletionTags(ctx, args, incomplete, printEntries=False):
+def tabCompletionTags(ctx, args, incomplete):
     loadConfig()
     unlockStorage()
     tabs = []
@@ -318,7 +324,9 @@ def tabCompletionTags(ctx, args, incomplete, printEntries=False):
         tabs.append(tags[t]['title'].lower() + '/')
     return [k for k in tabs if incomplete.lower() in k]
 
-
+def tabCompletionConfig(ctx, args, incomplete):
+    loadConfig()
+    return [k for k in config if incomplete.lower() in k]
 '''
 CLI Methods
 '''
@@ -376,6 +384,8 @@ def find(name):# TODO alias
             es[str(e)] = e
         elif name.lower() in e['note'].lower():
             es[str(e)] = e
+        elif name.lower() in e['username'].lower():
+            es[str(e)] = e
     for t in tags:
         t = getTag(t)[1]
         if name.lower() in t['title'].lower():
@@ -422,7 +432,8 @@ def ls(tag_name):# TODO alias
 @click.option('-j', '--json', is_flag=True, help='json format')
 def cat(entry_name, secrets, json): # TODO alias
     '''Decrypt and print an entry'''
-    e = getEntry(entry_name)[1]
+    entry_name = parseName(entry_name)
+    e = getEntry(entry_name[1], entry_name[2])[1]
     if e is None:
         return
 
@@ -462,7 +473,8 @@ def cat(entry_name, secrets, json): # TODO alias
 @click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
     '''Decrypt and copy line of entry to clipboard'''
-    e = getEntry(entry_name)[1]
+    entry_name = parseName(entry_name)
+    e = getEntry(entry_name[1], entry_name[2])[1]
     if e is None:
         sys.exit(-1)
 
@@ -514,7 +526,9 @@ def generate(insert, typeof, clip, seperator, force, length):
         pwd = cryptomodul.generatePassword(length)
 
     if insert:
-        e = getEntry(insert)
+
+        entry_name = parseName(entry_name)
+        e = getEntry(entry_name[1], entry_name[2])
         entry_id = e[0]
         e = e[1]
         if e is None:
@@ -547,7 +561,8 @@ def rm(entry_name, tag, force):# TODO alias
             del db_json['tags'][tag_id]
             saveStorage()
     else:
-        entry_id = getEntry(entry_name)[0]
+        entry_name = parseName(entry_name)
+        entry_id = getEntry(entry_name[1], entry_name[2])[0]
         if not entry_id:
             sys.exit(-1)
         if force or click.confirm('Delete entry ' + click.style(entries[entry_id]['title'], bold=True)):
@@ -567,8 +582,9 @@ def insert(tag_name, entry_name, tag):
             sys.exit(-1)
         t = {'title': '', 'icon': ''}
         t = editTag(t)
-        saveTag(t)
-        saveStorage()
+        if t:
+            saveTag(t)
+            saveStorage()
     else:
         tag_id = getTag(tag_name)[0]
         if tag_id is None:
@@ -598,11 +614,13 @@ def edit(entry_name, tag):
         if t is None:
             sys.exit(-1)
         t = editTag(t)
-        saveTag(t, tag_id)
-        saveStorage()
+        if t:
+            saveTag(t, tag_id)
+            saveStorage()
     else:
-        entry_id = getEntry(entry_name)[0]
-        e = getEntry(entry_name)[1]
+        entry_name = parseName(entry_name)
+        entry_id = getEntry(entry_name[1], entry_name[2])[0]
+        e = getEntry(entry_name[1], entry_name[2])[1]
         if e is None:
             sys.exit(-1)
 
@@ -619,14 +637,20 @@ def git(commands):
     sys.exit(0)
 
 @cli.command()
-@click.argument('argument', type=click.Choice(['reset', 'edit']), nargs=1, autocompletion=tabCompletionEntries)
-def conf(argument):
+@click.option('-e','edit', is_flag=True, help='edit config')
+@click.option('-r','reset', is_flag=True, help='reset config')
+@click.argument('setting_name', type=click.STRING, default='', nargs=1, autocompletion=tabCompletionConfig)
+@click.argument('setting_value', type=click.STRING, default='None', nargs=1)
+def conf(edit, reset, setting_name, setting_value):
+    global config
     '''Configuration settings'''
-    if argument == 'reset':
+    if edit:
+        click.edit(filename=CONFIG_FILE, require_save=True)
+    elif reset:
         if os.path.isfile(CONFIG_FILE):
             os.remove(CONFIG_FILE)
-    if argument == 'edit':
-        click.edit(filename=CONFIG_FILE)
+    else:
+        writeConfig()
     sys.exit(0)
 
 @cli.command()
@@ -648,10 +672,10 @@ def exportdb(tag_name, entry_name, path, fileformat):
         with click.progressbar(entries, label='Exporting DB', show_eta=False, fill_char='#', empty_char='-') as bar:
             for e in bar:
                 entries[e] = unlockEntry(e)
-
         with open(os.path.join(path, 'export.json'), 'w', encoding='utf8') as f:
             json.dump(entries, f)
     sys.exit(0)
+
 # TODO CSV    
 @cli.command()
 @click.option('-p', '--path', type=click.Path(), help='path to import file')

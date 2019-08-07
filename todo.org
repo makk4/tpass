@@ -44,6 +44,7 @@
 *** TODO tags
 *** TODO entries
 ** TODO click aliase
+** TODO configParser
  
 * Optional
 ** TODO totp
