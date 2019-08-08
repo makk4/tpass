@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import json
+import csv
 import tempfile
 import pyperclip
 import time
@@ -92,7 +93,6 @@ def unlockStorage():
             entries = db_json['entries']
             tags = db_json['tags']
 
-
 def saveStorage():
     global config
     tmp_file = DEV_SHM
@@ -155,7 +155,7 @@ def parseName(input_str):
 
 def getEntry(titleOrNote,username=None):
     for e in entries:
-        if titleOrNote.lower() == entries[e]['title'].lower() or titleOrNote.lower() == entries[e]['note'].lower():
+        if titleOrNote.lower() == entries[e]['note'].lower() or titleOrNote.lower() == entries[e]['title'].lower():
             if username.lower() == entries[e]['username'].lower() or username is None:
                 return str(e), entries[e]
     return None, None
@@ -191,7 +191,7 @@ def getEntriesByTag(tag_id):
 
 def printEntries(es):
     for e in es:
-        click.echo(es[e]['title'] + ':' + es[e]['username'])
+        click.echo(es[e]['note'] + ':' + es[e]['username'])
 
 def printTags(ts, includeEntries=False):
     tag_str = ''
@@ -227,8 +227,7 @@ def iconsToString():
 def unlockEntry(e):
     if e is None or e['success'] is False or e['export'] is True:
         return None
-    e['success'] = False
-    e['export'] = True
+    e['success'] = False;e['export'] = True
     try:   
         getClient()
         keys = trezorapi.getTrezorKeys(client)
@@ -248,8 +247,7 @@ def unlockEntry(e):
 def lockEntry(e): 
     if e is None or e['success'] is False or e['export'] is False:
         return None
-    e['success'] = False
-    e['export'] = False
+    e['success'] = False;e['export'] = False
     try:
         getClient()
         keys = trezorapi.getTrezorKeys(client)
@@ -259,11 +257,10 @@ def lockEntry(e):
         raise Exception('Error while accessing trezor device')
     try:
         e['password']['data'] = cryptomodul.encryptEntryValue(json.dumps(e['password']['data']), plain_nonce)
-        e['password']['type'] = 'Buffer'
         e['safe_note']['data'] = cryptomodul.encryptEntryValue(json.dumps(e['safe_note']['data']), plain_nonce)
-        e['safe_note']['type'] = 'Buffer'
     except:
         raise Exception('Error while decrypting entry')
+    e['password']['type'] = 'Buffer';e['safe_note']['type'] = 'Buffer'
     e['success'] = True
     return e
 
@@ -293,14 +290,11 @@ def editEntry(e):
             edit_json = json.loads(edit_json)
         except:
             raise IOError('edit gone wrong')
-        e['title'] = edit_json['title']
-        e['note'] = edit_json['item/url*']
-        e['username'] = edit_json['username']
-        e['password']['data'] = edit_json['password']
-        e['safe_note']['data'] = edit_json['secret']
-        e['tags'] = edit_json['tags']
+        if edit_json['item/url*'] is None or edit_json['item/url*'] == '':
+            click.echo('item/url* field is mandatory')
+            return None
+        e['note'] = edit_json['item/url*'];e['title'] = edit_json['title'];e['username'] = edit_json['username'];e['password']['data'] = edit_json['password'];e['safe_note']['data'] = edit_json['secret'];e['tags'] = edit_json['tags']
         e['success'] = True
-        e['export'] = True
         return lockEntry(e)
     e['success'] = True
     return None
@@ -312,8 +306,10 @@ def editTag(t):
             edited_json = json.loads(edited_json)
         except:
             raise IOError('edit gone wrong')
-        t['title'] = edited_json['title']
-        t['icon'] = edited_json['icon']
+        if edit_json['title'] is None or edit_json['title'] == '':
+            click.echo('title field is mandatory')
+            return None
+        t['title'] = edited_json['title'];t['icon'] = edited_json['icon']
         return t
     else:
         return None
@@ -428,16 +424,23 @@ def grep(name, caseinsensitive):
 def ls(tag_name):# TODO alias
     '''List names of passwords from tag'''
     unlockStorage()
+    #tag_name = parseName(tag_name)[0]
     ts = {}
     if tag_name == '':
         ts = tags
+        printTags(ts, True)
+    if tag_name.lower() == 'all' or tag_name.lower() == 'all/':
+        t = getTag(tag_name)
+        ts[t[0]] = t[1]
+        printTags(ts)
+        printEntries(entries)
     else:
         t = getTag(tag_name)
         ts[t[0]] = t[1]
 
         if t[1] is None:
             return
-    printTags(ts, True)
+        printTags(ts, True)
     sys.exit(0)
     
 @cli.command()
@@ -460,19 +463,20 @@ def show(entry_name, secrets, json): # TODO alias
         pwd = e['password']['data']
         safeNote = e['safe_note']['data']
     if json:
-        click.echo(e)
+        edit_json = {'item/url*':e['note'], 'title':e['title'], 'username':e['username'], 'password':pwd, 'secret':safeNote, 'tags':e['tags']}
+        click.echo(edit_json)
     else:
         ts = {}
         for i in e['tags']:
             ts[i] = tags.get(str(i))
 
         click.echo(
-            click.style(e['note'], bold=True) + '\n' +
-            click.style('username: ', bold=True) + e['username'] + '\n' +
-            click.style('password: ', bold=True) + pwd + '\n' +
-            click.style('item/url: ', bold=True) + e['title'] + '\n' +
-            click.style('secret:   ', bold=True) + safeNote  + '\n' +
-            click.style('tags:     ', bold=True) + tagsToString(ts))
+            click.style('item/url*: ', bold=True) + e['note'] + '\n' +
+            click.style('title:     ', bold=True) + e['title'] + '\n' +
+            click.style('username:  ', bold=True) + e['username'] + '\n' +
+            click.style('password:  ', bold=True) + pwd + '\n' +
+            click.style('secret:    ', bold=True) + safeNote  + '\n' +
+            click.style('tags:      ', bold=True) + tagsToString(ts))
     sys.exit(0)
 
 @cli.command()
@@ -690,18 +694,23 @@ def lock():
 # TODO CSV
 @click.argument('tag_name', default='all', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
 @click.argument('entry_name', type=click.STRING, nargs=-1, autocompletion=tabCompletionEntries)
-@click.option('-p', '--path', default=os.path.expanduser('Downloads'), type=click.Path(), help='path for export')
-@click.option('-f', '--fileformat', default='json', type=click.STRING, help='file format')
+@click.option('-p', '--path', default=os.path.expanduser('~'), type=click.Path(), help='path for export')
+@click.option('-f', '--fileformat', default='json', type=click.Choice(['json', 'csv','txt']), help='file format')
 @cli.command()
 def exportdb(tag_name, entry_name, path, fileformat):
     '''Export data base'''
     unlockStorage()
+    with click.progressbar(entries, label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:
+        for e in bar:
+            entries[e] = unlockEntry(entries[e])
     if fileformat == 'json':
-        with click.progressbar(entries, label='Exporting DB', show_eta=False, fill_char='#', empty_char='-') as bar:
-            for e in bar:
-                entries[e] = unlockEntry(e)
-        with open(os.path.join(path, 'export.json'), 'w', encoding='utf8') as f:
+        with open(os.path.join('.', 'export.json'), 'w', encoding='utf8') as f:
             json.dump(entries, f)
+    elif fileformat == 'csv':
+        with open(os.path.join('.', 'export.csv'), 'w') as f:
+            writer = csv.writer(f, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            for e in entries:
+                writer.writerow({e['note'], e['title'], e['username'],e['password']['data'],e['safe_note']['data']})
     sys.exit(0)
 
 # TODO CSV    

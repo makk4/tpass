@@ -1,4 +1,6 @@
 * Basic features
+** edit tags with icons
+** edit entries with tags
 ** TODO Export
 *** DONE json
 *** TODO CSV
@@ -12,6 +14,7 @@
 ** TODO click aliase
 ** TODO grep
 ** TODO support for case sensitive Names
+** TODO show IDs on entries ?
 ** DONE no saveOnDisk option
 ** DONE Entry operations
 *** DONE insert
