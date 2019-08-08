@@ -1,13 +1,14 @@
 * Basic features
 ** TODO no saveOnDisk option
-** TODO Entry operations
-*** TODO insert
+** DONE Entry operations
+*** DONE insert
 *** DONE edit
 *** DONE remove
-** TODO Tag operations -t
-*** TODO insert
+** DONE Tag operations -t
+*** DONE insert
 *** DONE edit
 *** DONE remove
+**** TODO delete Tags in entries
 ** DONE Export
 *** TODO CSV
 ** DONE Import

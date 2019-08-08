@@ -14,6 +14,8 @@ Untested Beta Software! - Do not use it
 - list, insert, delete, edit entries
 - copy passwords to clipboard or show
 - export, import database in JSON, CSV
+- offline usage
+- do not store metadata on disk mode
 
 ### Future plans:
 - Ask for password on Trezor device
