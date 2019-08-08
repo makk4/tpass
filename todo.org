@@ -10,11 +10,11 @@
 ** TODO device entropy
 ** TODO return values and input of getters in() str() ? --> ids
 ** TODO ask for password
-** TODO TPM compatible
 ** TODO click aliase
-** TODO grep
 ** TODO support for case sensitive Names
 ** TODO show IDs on entries ?
+** DONE grep
+** DONE TPM compatible
 ** DONE no saveOnDisk option
 ** DONE Entry operations
 *** DONE insert

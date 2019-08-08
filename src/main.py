@@ -163,7 +163,7 @@ def getEntry(titleOrNote,username=None):
 def getTag(tag_name):
     tag_name = tag_name.split('/')[0]
     for t in tags:
-        if tag_name.lower() == tags[t]['title'].lower():
+        if tag_name == tags[t]['title'].lower():
             return str(t), tags[t]
     return None, None
 
@@ -198,8 +198,9 @@ def printTags(ts, includeEntries=False):
     for t in ts:
         tag_id = t
         t = tags.get(tag_id)
-        icon = '# '
         icon = ICONS.get(t['icon'])['emoji']
+        if icon is None:
+            icon = '#'
         click.echo(icon + '  ' + t['title'] + '/')
         if includeEntries:
             es = getEntriesByTag(tag_id)
@@ -300,16 +301,23 @@ def editEntry(e):
     return None
 
 def editTag(t):
-    edited_json = click.edit(json.dumps(t, indent=4), require_save=True)
-    if edited_json:
+    edit_json = {'title':t['title'],'icon':t['icon']}
+    edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
+    if edit_json:
         try:
-            edited_json = json.loads(edited_json)
+            edit_json = json.loads(edit_json)
         except:
             raise IOError('edit gone wrong')
         if edit_json['title'] is None or edit_json['title'] == '':
             click.echo('title field is mandatory')
             return None
-        t['title'] = edited_json['title'];t['icon'] = edited_json['icon']
+        t['title'] = edit_json['title']
+        if edit_json['icon'] is None or edit_json['icon'] == '':
+            t['icon'] = 'home'
+        if ICONS.get(edit_json['icon']):
+            t['icon'] = edit_json['icon']
+        else:
+            t['icon'] = 'home'
         return t
     else:
         return None
@@ -322,7 +330,7 @@ def tabCompletionEntries(ctx, args, incomplete):
     for t in tags:
         selEntries = getEntriesByTag(t)
         for e in selEntries:
-            tabs.append(tags[t]['title'].lower() + '/' + selEntries[e]['note'].lower() + ':' + selEntries[e]['username'])
+            tabs.append(tags[t]['title'].lower() + '/' + selEntries[e]['note'].lower() + ':' + selEntries[e]['username'].lower())
     return [k for k in tabs if incomplete.lower() in k]
 
 # TODO print icons
@@ -424,7 +432,6 @@ def grep(name, caseinsensitive):
 def ls(tag_name):# TODO alias
     '''List names of passwords from tag'''
     unlockStorage()
-    #tag_name = parseName(tag_name)[0]
     ts = {}
     if tag_name == '':
         ts = tags
@@ -437,7 +444,6 @@ def ls(tag_name):# TODO alias
     else:
         t = getTag(tag_name)
         ts[t[0]] = t[1]
-
         if t[1] is None:
             return
         printTags(ts, True)
@@ -596,7 +602,7 @@ def insert(tag_name, entry_name, tag):
     if tag is True:
         if getTag(tag_name)[1]:
             sys.exit(-1)
-        t = {'title': '', 'icon': ''}
+        t = {'title': '', 'icon': 'home'}
         t = editTag(t)
         if t is not None:
             saveTag(t)
