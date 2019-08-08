@@ -203,9 +203,7 @@ def printTags(ts, includeEntries=False):
         click.echo(icon + '  ' + t['title'] + '/')
         if includeEntries:
             es = getEntriesByTag(tag_id)
-            click.echo('----------')
             printEntries(es)
-            click.echo('----------')
 
 def tagsToString(ts, includeIds=False):
     tags_str = ''
@@ -468,9 +466,8 @@ def show(entry_name, secrets, json): # TODO alias
         for i in e['tags']:
             ts[i] = tags.get(str(i))
 
-        click.echo('~~+~#~+~~+~#~+~~+~#~+~~+~#~+' + '\n' +
-            click.style('\t' + e['note'], bold=True) + '\n' +
-            '+~#~+~~+~#~+~~+~#~+~~+~#~+~~' + '\n' +
+        click.echo(
+            click.style(e['note'], bold=True) + '\n' +
             click.style('username: ', bold=True) + e['username'] + '\n' +
             click.style('password: ', bold=True) + pwd + '\n' +
             click.style('item/url: ', bold=True) + e['title'] + '\n' +
