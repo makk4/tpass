@@ -28,7 +28,7 @@ def decryptEntryValue(nonce, valArr):
             break
         # throws exception when the tag is wrong
     data = data + decryptor.finalize().decode()
-    return json.loads(data)
+    return data
 
 def encryptEntryValue(val, nonce):
     iv = b''

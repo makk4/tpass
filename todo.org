@@ -1,22 +1,27 @@
 * Basic features
+** TODO no saveOnDisk option
 ** TODO Entry operations
+*** TODO insert
 *** DONE edit
-*** DONE insert
 *** DONE remove
+** TODO Tag operations -t
+*** TODO insert
+*** DONE edit
+*** DONE remove
+** DONE Export
+*** TODO CSV
+** DONE Import
+*** TODO CSV
+** TODO return values and input of getters in() str() ? --> ids
+** TODO ask for password
+** TODO TPM compatible
+** TODO click aliase
+** TODO grep
 ** DONE Icons
 ** DONE findEntrieById Bug
 ** DONE bash autocomplete
 ** DONE Format compatiblle with trezor
-** DONE Export
-** TODO Tag operations -t
-*** TODO insert
-*** TODO edit
-*** TODO remove
-*** TODO CSV
-** DONE Import
-*** TODO CSV
 ** DONE Error handling
-*** TODO check 
 ** DONE unit tests
 *** DONE emulator
 ** DONE Wordlist to txt
@@ -30,12 +35,12 @@
 *** DONE padding?
 *** DONE how get IV -> Random
 *** TODO get entropy from device
-** TODO support for case sensitive Names
+*** TODO support for case sensitive Names
 *** TODO tab completion
 *** TODO getters and find
-** TODO return values and input of getters in() str() ? --> ids
+
+* optimizing
 ** TODO switch to poetry
-** TODO ask for password
 ** TODO Code refactoring
 *** TODO create seperate core class for db operations
 *** TODO naming conventions tag_name -> tag_title
@@ -43,9 +48,6 @@
 *** DONE ICONS improvment -> dict search
 *** TODO tags
 *** TODO entries
-** TODO click aliase
-** TODO configParser
-** TODO saveOnDisk
  
 * Optional
 ** TODO totp
