@@ -21,7 +21,7 @@
 *** DONE insert
 *** DONE edit
 *** DONE remove
-**** TODO delete Tags in entries
+*** DONE delete Tags in entries
 ** DONE Icons
 ** DONE findEntrieById Bug
 ** DONE bash autocomplete

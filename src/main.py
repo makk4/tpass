@@ -370,15 +370,16 @@ def cli():
 @click.option('-p', '--path', default=DROPBOX_PATH, type=click.Path(), help='path to database')
 @click.option('-c', '--cloud', default='dropbox', type=click.Choice(['dropbox', 'googledrive', 'git']), help='cloud provider: <dropbox> <googledrive> <git>')
 @click.option('-a', '--pinentry', is_flag=True, help='ask for password on device')
-def init(path, cloud, pinentry):
+@click.option('-d', '--nodisk', is_flag=False, help='do not store metadata on disk')
+def init(path, cloud, pinentry, nodisk):
     '''Initialize new password storage'''
     global config
-    if not os.path.exists(path):    
+    if not os.path.exists(path):
         os.makedirs(path)
     if len(os.listdir(path)) != 0:
-        click.echo(path + ' is not empty, not initialized')
+        click.echo(path + ' is not empty, not initialized', err=True)
         exit(-1)
-    config['file_name'] = 'init'; config['store_path'] = path; config['cloud_provider'] = cloud; config['pinentry'] = pinentry
+    config['file_name'] = 'init'; config['store_path'] = path; config['cloud_provider'] = cloud; config['pinentry'] = pinentryconfig['storeMetaDataOnDisk'] = nodisk
     if cloud == 'git':
         subprocess.call('init', cwd=config['store_path'], shell=True)
         click.echo('password store initialized with git in ' + path)
@@ -405,21 +406,23 @@ def find(name):# TODO alias
     sys.exit(0)
 
 @cli.command()
-def grep(name):
+@click.argument('name', type=click.STRING, nargs=1)
+@click.option('-i', '--caseinsensitive', is_flag=True, help='not case sensitive search')
+def grep(name, caseinsensitive):
     '''Search for pattern in decrypted entries'''
     unlockStorage()
     for e in entries:
         e = unlockEntry(entries[e])
         if name.lower() in e['title'].lower():
-            click.echo(click.style('[' + e['title'] + ']//field: <title>//: ', bold=True) + e['title'].lower())
+            click.echo(click.style(e['title'] + ':' + e['username'] + '//<title>//: ', bold=True, fg='green') + e['title'].lower())
         elif name.lower() in e['note'].lower():
-            click.echo(click.style('[' + e['note'] + ']//field: <note>//: ', bold=True) + e['note'].lower())
+            click.echo(click.style(e['title'] + ':' + e['username'] + '//<item/url*>//: ', bold=True, fg='green') + e['note'].lower())
         elif name.lower() in e['username'].lower():
-            click.echo(click.style('[' + e['username'] + ']//field: <username>//: ', bold=True) + e['username'].lower())
+            click.echo(click.style(e['title'] + ':' + e['username'] + '//<username>//: ', bold=True, fg='green') + e['username'].lower())
         elif name.lower() in e['password']['data'].lower():
-            click.echo(click.style('[' + e['password']['data'] + ']//field: <password>//: ', bold=True) + e['password']['data'].lower())
+            click.echo(click.style(e['title'] + ':' + e['username'] + '//<password>//: ', bold=True, fg='green') + e['password']['data'].lower())
         elif name.lower() in e['safe_note']['data'].lower():
-            click.echo(click.style('[' + e['safe_note']['data'] + ']//field: <titsafe_notele>//: ', bold=True) + e['safe_note']['data'].lower())
+            click.echo(click.style(e['title'] + ':' + e['username'] + '//<secret>//: ', bold=True, fg='green') + e['safe_note']['data'].lower())
     sys.exit(0)
 
 @cli.command()
@@ -567,6 +570,9 @@ def rm(entry_name, tag, force):# TODO alias
             sys.exit(-1)
         if force or click.confirm('Delete tag: ' + click.style(tags[tag_id]['title'], bold=True)):
             del db_json['tags'][tag_id]
+            es = getEntriesByTag(tag_id)
+            for e in es:
+                entries[e]['tags'].remove(int(tag_id))
             saveStorage()
     else:
         entry_name = parseName(entry_name)
