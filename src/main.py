@@ -276,10 +276,8 @@ def insertEntry(entry, entry_id=None):
     if not entry_id:
         for e in entries:
             entry_id = str(int(e) + 1)
-            print(entry_id)
     if entry and entry['success'] is True and entry['export'] is False:
         entries.update( {entry_id : entry} )
-        print(db_json['entries'][entry_id])
         return True
     else:
         raise Exception('Error detected while inserting Entry, aborted')
@@ -449,9 +447,7 @@ def show(entry_name, secrets, json): # TODO alias
     '''Decrypt and print an entry'''
     unlockStorage()
     entry_name = parseName(entry_name)
-    print(entry_name[1] + ' ' + entry_name[2])
     e = getEntry(entry_name[1], entry_name[2])[1]
-    print(e)
     if e is None:
         return
 
@@ -513,7 +509,6 @@ def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
 @click.option('-f', '--force', is_flag=True, help='force without confirmation')
 def generate(insert, typeof, clip, seperator, force, length):
     '''Generate new password'''
-    unlockStorage()
     global db_json
     if (length < 6 and typeof is 'password') or (length < 3 and typeof is 'wordlist') or (length < 4 and typeof is 'pin'):
         click.echo(length + ' is too short for password with type ' + typeof)
@@ -538,7 +533,7 @@ def generate(insert, typeof, clip, seperator, force, length):
         pwd = cryptomodul.generatePassword(length)
 
     if insert:
-
+        unlockStorage()
         entry_name = parseName(entry_name)
         e = getEntry(entry_name[1], entry_name[2])
         entry_id = e[0]

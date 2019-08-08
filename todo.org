@@ -1,5 +1,18 @@
 * Basic features
-** TODO no saveOnDisk option
+** TODO Export
+*** DONE json
+*** TODO CSV
+** TODO Import
+*** DONE json
+*** TODO CSV
+** TODO device entropy
+** TODO return values and input of getters in() str() ? --> ids
+** TODO ask for password
+** TODO TPM compatible
+** TODO click aliase
+** TODO grep
+** TODO support for case sensitive Names
+** DONE no saveOnDisk option
 ** DONE Entry operations
 *** DONE insert
 *** DONE edit
@@ -9,20 +22,13 @@
 *** DONE edit
 *** DONE remove
 **** TODO delete Tags in entries
-** DONE Export
-*** TODO CSV
-** DONE Import
-*** TODO CSV
-** TODO return values and input of getters in() str() ? --> ids
-** TODO ask for password
-** TODO TPM compatible
-** TODO click aliase
-** TODO grep
 ** DONE Icons
 ** DONE findEntrieById Bug
 ** DONE bash autocomplete
 ** DONE Format compatiblle with trezor
 ** DONE Error handling
+** DONE tab completion
+** DONE getters and find
 ** DONE unit tests
 *** DONE emulator
 ** DONE Wordlist to txt
@@ -35,10 +41,7 @@
 *** DONE encrypt nonce? -> absolutly
 *** DONE padding?
 *** DONE how get IV -> Random
-*** TODO get entropy from device
-*** TODO support for case sensitive Names
-*** TODO tab completion
-*** TODO getters and find
+*** DONE get entropy from device
 
 * optimizing
 ** TODO switch to poetry
