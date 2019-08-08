@@ -16,7 +16,7 @@ import re
 ICONS = {'home': {'emoji': '🏠'}, 'person-stalker': {'emoji': '👩‍👩‍👦'}, 'social-bitcoin': {'emoji': '₿'}, 'person': {'emoji': '😀'}, 'star': {'emoji': '⭐'}, 'flag': {'emoji': '🏳️'}, 'heart':{'emoji':'❤'}, 'settings': {'emoji':'⚙️'}, 'email':{'emoji':'✉️'},'cloud': {'emoji': '☁️'}, 'alert-circled': {'emoji':'⚠️'}, 'android-cart': {'emoji': '🛒'}, 'image': {'emoji': '🖼️'}, 'card': {'emoji': '💳'}, 'earth': {'emoji': '🌐'}, 'wifi': {'emoji': '📶'}}
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
-GIT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
+DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
 CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
 CONFIG_FILE = os.path.join(CONFIG_PATH, 'config.json')
 WORDLIST = os.path.join(CONFIG_PATH, 'wordlist.txt')
@@ -369,21 +369,25 @@ def cli():
     pass
 
 @cli.command()
-@click.option('-p', '--path', default=DROPBOX_PATH, type=click.Path(), help='path to database')
+@click.option('-p', '--path', default=DEFAULT_PATH, type=click.Path(), help='path to database')
 @click.option('-c', '--cloud', default='dropbox', type=click.Choice(['dropbox', 'googledrive', 'git']), help='cloud provider: <dropbox> <googledrive> <git>')
 @click.option('-a', '--pinentry', is_flag=True, help='ask for password on device')
 @click.option('-d', '--nodisk', is_flag=False, help='do not store metadata on disk')
 def init(path, cloud, pinentry, nodisk):
     '''Initialize new password storage'''
     global config
+    if cloud == 'googledrive':
+        path = GOOGLE_DRIVE_PATH
+    elif cloud == 'dropbox':
+        path = DROPBOX_PATH
     if not os.path.exists(path):
         os.makedirs(path)
     if len(os.listdir(path)) != 0:
         click.echo(path + ' is not empty, not initialized', err=True)
         exit(-1)
-    config['file_name'] = 'init'; config['store_path'] = path; config['cloud_provider'] = cloud; config['pinentry'] = pinentryconfig['storeMetaDataOnDisk'] = nodisk
+    config['file_name'] = 'init'; config['store_path'] = path; config['cloud_provider'] = cloud; config['pinentry'] = pinentry; config['storeMetaDataOnDisk'] = nodisk
     if cloud == 'git':
-        subprocess.call('init', cwd=config['store_path'], shell=True)
+        subprocess.call('git init', cwd=config['store_path'], shell=True)
         click.echo('password store initialized with git in ' + path)
     saveStorage()
     writeConfig()
@@ -502,11 +506,11 @@ def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
     elif url:
         pyperclip.copy(e['title'])
     else:
-        secrets = unlockEntry(e)
+        e = unlockEntry(e)
         if secret:
-            pyperclip.copy(secrets[1])
+            pyperclip.copy(e['password']['data'])
         else:
-            pyperclip.copy(secrets[0])
+            pyperclip.copy(e['safe_note']['data'])
         clearClipboard()
     sys.exit(0)
     
