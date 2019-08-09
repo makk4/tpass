@@ -687,7 +687,7 @@ def config(edit, reset, setting_name, setting_value):
 def unlock(force):
     '''Unlock Storage and writes plain metadata to disk'''
     if force or click.confirm('Unlock storage?'):
-        unlock()
+        unlockStorage()
     sys.exit(0)
 
 @cli.command()
