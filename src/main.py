@@ -413,6 +413,7 @@ def find(name):# TODO alias
     printTags(ts)
     sys.exit(0)
 
+# TODO generalize with kk, vv
 @cli.command()
 @click.argument('name', type=click.STRING, nargs=1)
 @click.option('-i', '--caseinsensitive', is_flag=True, help='not case sensitive search')
@@ -422,15 +423,15 @@ def grep(name, caseinsensitive):
     for e in entries:
         e = unlockEntry(entries[e])
         if name.lower() in e['title'].lower():
-            click.echo(click.style(e['title'] + ':' + e['username'] + '//<title>//: ', bold=True, fg='green') + e['title'].lower())
+            click.echo(click.style(e['title'] + ':' + e['username'], bold=True, fg='green') + click.style('//<title>//: ', fg='magenta') + e['title'].lower())
         elif name.lower() in e['note'].lower():
-            click.echo(click.style(e['title'] + ':' + e['username'] + '//<item/url*>//: ', bold=True, fg='green') + e['note'].lower())
+            click.echo(click.style(e['title'] + ':' + e['username'], bold=True, fg='green') + click.style('//<item/url*>//: ', fg='magenta') + e['note'].lower())
         elif name.lower() in e['username'].lower():
-            click.echo(click.style(e['title'] + ':' + e['username'] + '//<username>//: ', bold=True, fg='green') + e['username'].lower())
+            click.echo(click.style(e['title'] + ':' + e['username'], bold=True, fg='green') + click.style('//<username>//: ', fg='magenta') + e['username'].lower())
         elif name.lower() in e['password']['data'].lower():
-            click.echo(click.style(e['title'] + ':' + e['username'] + '//<password>//: ', bold=True, fg='green') + e['password']['data'].lower())
+            click.echo(click.style(e['title'] + ':' + e['username'], bold=True, fg='green') + click.style('//<password>//: ', fg='magenta') + e['password']['data'].lower())
         elif name.lower() in e['safe_note']['data'].lower():
-            click.echo(click.style(e['title'] + ':' + e['username'] + '//<secret>//: ', bold=True, fg='green') + e['safe_note']['data'].lower())
+            click.echo(click.style(e['title'] + ':' + e['username'], bold=True, fg='green') + click.style('//<secret>//: ', fg='magenta') + e['safe_note']['data'].lower())
     sys.exit(0)
 
 @cli.command()
