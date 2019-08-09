@@ -300,8 +300,7 @@ def editEntry(e):
     click.echo(tagsToString(tags, True))
     click.echo('Choose a tag')
     inputTag = click.prompt(click.style('[tag(s)] ', bold=True), type=click.Choice(tags), default=e['tags'])
-    if inputTag:
-        e['tags'] = inputTag
+    e['tags'] = [int(inputTag)]
     edit_json = {'item/url*':e['note'], 'title':e['title'], 'username':e['username'], 'password':e['password']['data'], 'secret':e['safe_note']['data']}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
     if edit_json:
@@ -447,7 +446,7 @@ def ls(tag_name):# TODO alias
         t = getTag(tag_name)
         ts[t[0]] = t[1]
         printTags(ts)
-        printEntries(entries)
+        printEntries(entries, True)
     else:
         t = getTag(tag_name)
         ts[t[0]] = t[1]
