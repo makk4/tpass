@@ -1,6 +1,5 @@
 * Basic features
-** edit tags with icons
-** edit entries with tags
+** TODO ask for password
 ** TODO Export
 *** DONE json
 *** TODO CSV
@@ -9,10 +8,13 @@
 *** TODO CSV
 ** TODO device entropy
 ** TODO return values and input of getters in() str() ? --> ids
-** TODO ask for password
 ** TODO click aliase
 ** TODO support for case sensitive Names
 ** TODO show IDs on entries ?
+
+
+
+
 ** DONE grep
 ** DONE TPM compatible
 ** DONE no saveOnDisk option

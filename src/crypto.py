@@ -30,7 +30,7 @@ def decryptEntryValue(nonce, valArr):
     data = data + decryptor.finalize().decode()
     return json.loads(data)
 
-def encryptEntryValue(val, nonce):
+def encryptEntryValue(nonce, val):
     iv = b''
     while (len(iv) != 12):
         iv = os.urandom(12)
@@ -44,8 +44,7 @@ def encryptEntryValue(val, nonce):
     return [x for x in cipherText]
 
 # @author:satoshilabs
-def decryptStorage(store_path, keys):
-    encKey = keys[2]
+def decryptStorage(store_path, encKey):
     cipherkey = bytes.fromhex(encKey)
     with open(store_path, 'rb') as f:
         iv = f.read(12)
@@ -63,8 +62,7 @@ def decryptStorage(store_path, keys):
 
     return json.loads(data)
 
-def encryptStorage(db_json, store_path, keys):
-    encKey = keys[2]
+def encryptStorage(db_json, store_path, encKey):
     cipherkey = bytes.fromhex(encKey)
     iv = os.urandom(12)
     cipher = Cipher(algorithms.AES(cipherkey), modes.GCM(iv), backend=default_backend())
@@ -85,12 +83,15 @@ def generatePassword(length):
             break
     return password
 
-def generatePassphrase(length, words, seperator):
+def generatePassphrase(length, words, seperator, entropy=None):
     winners = []
-    for i in range(0, int(length)):
-        choose = (secrets.randbelow(6) + 1) + 10 * (secrets.randbelow(6) + 1) + 100 * (secrets.randbelow(6) + 1) + 1000 * (secrets.randbelow(6) + 1) + 10000 * (secrets.randbelow(6) + 1)
-        winners.append(words[str(choose)])          
-    return seperator.join(winners) 
+    if entropy is None:
+        for i in range(0, int(length)):
+            choose = (secrets.randbelow(6) + 1) + 10 * (secrets.randbelow(6) + 1) + 100 * (secrets.randbelow(6) + 1) + 1000 * (secrets.randbelow(6) + 1) + 10000 * (secrets.randbelow(6) + 1)
+            winners.append(words[str(choose)])
+        return seperator.join(winners) 
+    else:
+        return entropy
 
 def generatePin(length):
     pin = ''
