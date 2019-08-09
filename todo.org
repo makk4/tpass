@@ -7,11 +7,12 @@
 *** DONE json
 *** TODO CSV
 ** TODO device entropy
-** TODO return values and input of getters in() str() ? --> ids
+** DONE return values and input of getters int() str() ? --> ids
 ** TODO click aliase
 ** TODO support for case sensitive Names
-** TODO show IDs on entries ?
+** DONE show IDs on entries ?
 ** TODO multiple tags per entrie in editEntry 
+** TODO simplejson error checking
 
 
 

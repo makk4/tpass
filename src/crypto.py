@@ -7,8 +7,6 @@ import os
 import string
 import random
 import secrets
-import sys
-import re
 
 CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
 WORDLIST = os.path.join(CONFIG_PATH, 'wordlist.txt')

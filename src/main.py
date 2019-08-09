@@ -5,14 +5,16 @@ import click
 import os
 import subprocess
 import sys
-import json
 import csv
 import tempfile
 import pyperclip
 import time
 import pyotp
 import re
-
+try:
+    import simplejson as json
+except:
+    import json
 ICONS = {'home': {'emoji': '🏠'}, 'person-stalker': {'emoji': '👩‍👩‍👦'}, 'social-bitcoin': {'emoji': '₿'}, 'person': {'emoji': '😀'}, 'star': {'emoji': '⭐'}, 'flag': {'emoji': '🏳️'}, 'heart':{'emoji':'❤'}, 'settings': {'emoji':'⚙️'}, 'email':{'emoji':'✉️'},'cloud': {'emoji': '☁️'}, 'alert-circled': {'emoji':'⚠️'}, 'android-cart': {'emoji': '🛒'}, 'image': {'emoji': '🖼️'}, 'card': {'emoji': '💳'}, 'earth': {'emoji': '🌐'}, 'wifi': {'emoji': '📶'}}
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
@@ -160,7 +162,7 @@ def getClient():
         except:
             raise Exception('Error while accessing trezor device')
 
-def parseName(input_str):
+def parseName(input_str):#TODO optimze
     tag = ''; note = ''; username = ''; entry_id = ''
     if not '/' in input_str and  not ':' in input_str and not '#' in input_str:
         tag = note = input_str
@@ -194,14 +196,14 @@ def getTag(tag_name):
             return k, v
     return None
 
-def getEntriesByTag(tag_id):
+def getEntriesByTag(tag_id):#TODO optimze
     es = {}
     for k, v in entries.items():
         if int(tag_id) in v['tags'] or int(tag_id) == 0 and v['tags'] == []:
             es.update( {k : v} )  
     return es
 
-def printEntries(es, includeTree=False):
+def printEntries(es, includeTree=False):#TODO optimze
     if includeTree:
         start = '  ├── ';start_end = '  └── '
     else:
@@ -255,9 +257,9 @@ def unlockEntry(e):
         entry['password']['type'] = 'String'
         entry['safe_note']['data'] = cryptomodul.decryptEntryValue(plain_nonce, entry['safe_note']['data'])
         entry['safe_note']['type'] = 'String'
+        entry['success'] = True
     except:
         raise Exception('Error while decrypting entry')
-    entry['success'] = True
     return entry_id, entry
 
 def lockEntry(e):
@@ -275,25 +277,22 @@ def lockEntry(e):
     try:
         entry['password']['data'] = cryptomodul.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']))
         entry['safe_note']['data'] = cryptomodul.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']))
+        entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
+        entry['success'] = True
     except:
         raise Exception('Error while decrypting entry')
-    entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
-    entry['success'] = True
     return entry_id, entry
 
 def insertEntry(e):
     global db_json
     global entries
-    if e is None:
+    if e is None or e[1]['success'] is False or e[1]['export'] is True:
         return False
     entry_id = e[0]; entry = e[1]
     if entry_id == '':
         entry_id = str(max(int(entries.keys()) + 1))
-    if entry['success'] is True and entry['export'] is False:
-        entries.update( {entry_id : entry} )
-        return True
-    else:
-        raise Exception('Error detected while inserting Entry, aborted')
+    entries.update( {entry_id : entry} )
+    return True
 
 def editEntry(e):
     entry_id = e[0]; entry = e[1]
@@ -305,13 +304,13 @@ def editEntry(e):
     click.echo(tagsToString(tags, True))
     click.echo('Choose a tag')
     inputTag = click.prompt(click.style('[tag(s)] ', bold=True), type=click.Choice(tags), default=entry['tags'])
-    if int(inputTag) == '0':
+    if inputTag == '0':
         entry['tags'] = []
     else:
         entry['tags'] = [int(inputTag)]
-    edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data']}
+    edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data'], 'tags': tags}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
-    if edit_json:
+    if edit_json:#TODO simplify
         try:
             edit_json = json.loads(edit_json)
         except:
@@ -402,8 +401,8 @@ def cli():
 @click.option('-p', '--path', default=DEFAULT_PATH, type=click.Path(), help='path to database')
 @click.option('-c', '--cloud', default='dropbox', type=click.Choice(['dropbox', 'googledrive', 'git']), help='cloud provider: <dropbox> <googledrive> <git>')
 @click.option('-a', '--pinentry', is_flag=True, help='ask for password on device')
-@click.option('-d', '--nodisk', is_flag=False, help='do not store metadata on disk')
-def init(path, cloud, pinentry, nodisk):
+@click.option('-d', '--no-disk', is_flag=False, help='do not store metadata on disk')
+def init(path, cloud, pinentry, no_disk):
     '''Initialize new password storage'''
     global config
     if cloud == 'googledrive':
@@ -415,7 +414,7 @@ def init(path, cloud, pinentry, nodisk):
     if len(os.listdir(path)) != 0:
         click.echo(path + ' is not empty, not initialized', err=True)
         exit(-1)
-    config['file_name'] = 'init'; config['store_path'] = path; config['cloud_provider'] = cloud; config['pinentry'] = pinentry; config['storeMetaDataOnDisk'] = nodisk
+    config['file_name'] = 'init'; config['store_path'] = path; config['cloud_provider'] = cloud; config['pinentry'] = pinentry; config['storeMetaDataOnDisk'] = no_disk
     if cloud == 'git':
         subprocess.call('git init', cwd=config['store_path'], shell=True)
         click.echo('password store initialized with git in ' + path)
@@ -443,8 +442,8 @@ def find(name):# TODO alias
 # TODO generalize with kk, vv
 @cli.command()
 @click.argument('name', type=click.STRING, nargs=1)
-@click.option('-i', '--caseinsensitive', is_flag=True, help='not case sensitive search')
-def grep(name, caseinsensitive):
+@click.option('-i', '--case-insensitive', is_flag=True, help='not case sensitive search')
+def grep(name, case_insensitive):
     '''Search for pattern in decrypted entries'''
     unlockStorage()
     for k, v in entries.items():
@@ -460,7 +459,7 @@ def grep(name, caseinsensitive):
     sys.exit(0)
 
 @cli.command()
-@click.argument('tag_name', default='', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
+@click.argument('tag-name', default='', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
 def ls(tag_name):# TODO alias
     '''List names of passwords from tag'''
     unlockStorage()
@@ -472,7 +471,7 @@ def ls(tag_name):# TODO alias
     sys.exit(0)
     
 @cli.command()
-@click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
+@click.argument('entry-name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 @click.option('-s', '--secrets', is_flag=True, help='show password and secret notes')
 @click.option('-j', '--json', is_flag=True, help='json format')
 def show(entry_name, secrets, json): # TODO alias
@@ -511,7 +510,7 @@ def show(entry_name, secrets, json): # TODO alias
 @click.option('-u', '--user', is_flag=True, help='copy user')
 @click.option('-i', '--url', is_flag=True, help='copy item/url*')
 @click.option('-s', '--secret', is_flag=True, help='copy secret')
-@click.argument('entry_name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
+@click.argument('entry-name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
     '''Decrypt and copy line of entry to clipboard'''
     unlockStorage()
@@ -531,35 +530,35 @@ def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
         clearClipboard()
     sys.exit(0)
     
-@cli.command()
+@cli.command()# TODO callback eager options
 @click.argument('length', default=15, type=int)
-@click.option('-i', '--insert', default=None, type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
+@click.option('-i', '--insert','entry-name', default=None, type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 @click.option('-c', '--clip', is_flag=True, help='copy to clipboard')
-@click.option('-t', '--typeof', default='password', type=click.Choice(['password', 'wordlist', 'pin']), help='type of password')
+@click.option('-t', '--type','type_', default='password', type=click.Choice(['password', 'wordlist', 'pin']), help='type of password')
 @click.option('-s', '--seperator', default=' ', type=click.STRING, help='seperator for passphrase')
 @click.option('-f', '--force', is_flag=True, help='force without confirmation')
 @click.option('-d', '--entropy', is_flag=True, help='entropy from trezor device and host mixed')
-def generate(length, insert, typeof, clip, seperator, force, entropy):
+def generate(length, entry_name, type_, clip, seperator, force, entropy):
     '''Generate new password'''
     global db_json
-    if (length < 6 and typeof is 'password') or (length < 3 and typeof is 'wordlist') or (length < 4 and typeof is 'pin'):
-        if not click.confirm('Warning: ' + length + ' is too short for password with type ' + typeof + '. Continue?'):
+    if (length < 6 and type_ is 'password') or (length < 3 and type_ is 'wordlist') or (length < 4 and type_ is 'pin'):
+        if not click.confirm('Warning: ' + length + ' is too short for password with type ' + type_ + '. Continue?'):
             sys.exit(-1)
     if entropy:
         getClient()
         entropy = trezorapi.getEntropy(client, length)
     else:
         entropy = None
-    if typeof == 'wordlist':
+    if type_ == 'wordlist':
         words = loadWordlist()
         pwd = cryptomodul.generatePassphrase(length, words, seperator, entropy)
-    elif typeof == 'pin':
+    elif type_ == 'pin':
         pwd = cryptomodul.generatePin(length)
-    elif typeof == 'password':
+    elif type_ == 'password':
         pwd = cryptomodul.generatePassword(length)
-    if insert:
+    if entry_name:
         unlockStorage()
-        e = getEntry(insert)
+        e = getEntry(entry_name)
         e = unlockEntry(e)
         e[1]['password']['data'] = pwd
         e = lockEntry(e)
@@ -577,7 +576,7 @@ def generate(length, insert, typeof, clip, seperator, force, entropy):
 @cli.command()
 @click.option('--tag', '-t', type=click.STRING, help='remove tag', nargs=1, autocompletion=tabCompletionTags)
 @click.option('--force', '-f', is_flag=True, help='force without confirmation')
-@click.argument('entry_name', type=click.STRING, default='', nargs=1, autocompletion=tabCompletionEntries)
+@click.argument('entry-name', type=click.STRING, default='', nargs=1, autocompletion=tabCompletionEntries)
 def rm(entry_name, tag, force):# TODO alias
     '''Remove entry or tag'''
     unlockStorage()
@@ -597,8 +596,8 @@ def rm(entry_name, tag, force):# TODO alias
     sys.exit(0)
 
 @cli.command()
-@click.argument('tag_name', default='', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
-@click.argument('entry_name', default='', type=click.STRING, nargs=1)
+@click.argument('tag-name', default='', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
+@click.argument('entry-name', default='', type=click.STRING, nargs=1)
 @click.option('--tag', '-t', is_flag=True, help='insert tag')
 def insert(tag_name, entry_name, tag):
     '''Insert entry or tag'''
@@ -620,7 +619,7 @@ def insert(tag_name, entry_name, tag):
     sys.exit(0)
 
 @cli.command()#TODO option --entry/--tag with default
-@click.argument('entry_name', type=click.STRING, default='', nargs=1, autocompletion=tabCompletionEntries)
+@click.argument('entry-name', type=click.STRING, default='', nargs=1, autocompletion=tabCompletionEntries)
 @click.option('-t', '--tag', type=click.STRING, default='', nargs=1, help='edit tag', autocompletion=tabCompletionTags)
 def edit(entry_name, tag):
     '''Edit entry or tag'''
@@ -647,8 +646,8 @@ def git(commands):
 @cli.command()
 @click.option('-e','edit', is_flag=True, help='edit config')
 @click.option('-r','reset', is_flag=True, help='reset config')
-@click.argument('setting_name', type=click.STRING, default='', nargs=1, autocompletion=tabCompletionConfig)
-@click.argument('setting_value', type=click.STRING, default='None', nargs=1)
+@click.argument('setting-name', type=click.STRING, default='', nargs=1, autocompletion=tabCompletionConfig)
+@click.argument('setting-value', type=click.STRING, default='None', nargs=1)
 def config(edit, reset, setting_name, setting_value):
     '''Configuration settings'''
     global config
@@ -683,22 +682,22 @@ def lock():
     sys.exit(0)
 
 # TODO CSV
-@click.argument('tag_name', default='all', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
-@click.argument('entry_name', type=click.STRING, nargs=-1, autocompletion=tabCompletionEntries)
+@click.argument('tag-name', default='all', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
+@click.argument('entry-name', type=click.STRING, nargs=-1, autocompletion=tabCompletionEntries)
 @click.option('-p', '--path', default=os.path.expanduser('~'), type=click.Path(), help='path for export')
-@click.option('-f', '--fileformat', default='json', type=click.Choice(['json', 'csv','txt']), help='file format')
+@click.option('-f', '--file-format', default='json', type=click.Choice(['json', 'csv','txt']), help='file format')
 @cli.command()
-def exportdb(tag_name, entry_name, path, fileformat):
+def exportdb(tag_name, entry_name, path, file_format):
     '''Export data base'''
     global entries
     unlockStorage()
     with click.progressbar(entries, label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:
         for e in bar:
             entries[e] = unlockEntry(e)[1]
-    if fileformat == 'json':
+    if file_format == 'json':
         with open(os.path.join('.', 'export.json'), 'w', encoding='utf8') as f:
             json.dump(entries, f)
-    elif fileformat == 'csv':
+    elif file_format == 'csv':
         with open(os.path.join('.', 'export.csv'), 'w') as f:
             writer = csv.writer(f, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
             for e in entries.items():
