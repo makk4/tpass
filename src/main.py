@@ -24,9 +24,10 @@ TMP = os.path.join(tempfile.gettempdir())
 DEV_SHM = os.path.join('/', 'dev', 'shm')
 CLIPBOARD_CLEAR_TIME = 15
 
-newEntry = {'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True}
-entries = {}
+tag_new = {'':{'title': '', 'icon': 'home'}}
+entry_new = {'':{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True}}
 tags = {'0': {'title': 'All', 'icon': 'home'}, }
+entries = {}
 db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
 config = {'file_name': '', 'store_path': DEFAULT_PATH, 'cloud_provider': 'dropbox', 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True}
 client = None
@@ -135,9 +136,6 @@ def clearClipboard():
 
 def getClient():
     global client
-    pinentry = False
-    if config['pinentry'] == 'true':
-        pinentry = True
     if client is None:
         try:
             client = trezorapi.getTrezorClient()
@@ -145,25 +143,26 @@ def getClient():
             raise Exception('Error while accessing trezor device')
 
 def parseName(input_str):
-    tag = ''; titleOrNote = ''; username = ''
-    if '/' in input_str and ':' in input_str:
+    tag = ''; note = ''; username = ''; entry_id = ''
+    if not '/' in input_str and  not ':' in input_str and not '#' in input_str:
+        tag = note = input_str
+    if '/' in input_str:
         tag = input_str.split('/')[0]
-        titleOrNote = input_str.split('/')[1].split(':')[0]
+        input_str = input_str.split('/')[1]
+    if ':' in input_str:
+        note = input_str.split(':')[0]
         username = input_str.split(':')[1]
-    elif '/' in input_str:
-        tag = input_str.split('/')[0]
-        titleOrNote = input_str.split('/')[1]
-    elif ':' in input_str:
-        titleOrNote = input_str.split(':')[0]
-        username = input_str.split(':')[1]
-    else:
-        tag = titleOrNote = input_str
-    return tag, titleOrNote, username
+        input_str = input_str.split(':')[1]
+    if '#' in input_str:
+        username = input_str.split('#')[0]
+        entry_id = input_str.split('#')[1]
+    return tag, note, username, entry_id
 
 def getEntry(name):
     name = parseName(name)
-    note = name[1]
-    username = name[2]
+    note = name[1]; username = name[2]; entry_id = name[3]
+    if entry_id != '':
+        return entry_id, entries[entry_id]
     for e in entries.items():
         entry = e[1]
         if note.lower() == entry['note'].lower():
@@ -178,13 +177,6 @@ def getTag(tag_name):
         if tag_name == tag['title'].lower():
             return t
     return None
-
-def saveTag(tag):
-    global db_json
-    if tag:
-        db_json['tags'].update( {tag[0] : tag[1]} )
-    else:
-        click.echo('Error detected, aborted')
 
 def getEntriesByTag(tag_id):
     es = {}
@@ -206,9 +198,9 @@ def printEntries(es, includeTree=False):
     i = 0
     for k,v in es.items():
         if i == len(es)-1:
-            click.echo(start_end + v['note'] + ':' + click.style(v['username'], fg='green') + click.style('(' + k + ')', fg='magenta'))
+            click.echo(start_end + v['note'] + ':' + click.style(v['username'], fg='green') + click.style('#' + k, fg='magenta'))
         else:
-            click.echo(start + v['note'] + ':' + click.style(v['username'], fg='green') + click.style('(' + k + ')', fg='magenta'))
+            click.echo(start + v['note'] + ':' + click.style(v['username'], fg='green') + click.style('#' + k, fg='magenta'))
         i = i + 1
 
 def printTags(ts, includeEntries=False):
@@ -224,70 +216,72 @@ def printTags(ts, includeEntries=False):
 
 def tagsToString(ts, includeIds=False):
     tags_str = ''
-    for t in ts:
-        tag = ts.get(t)
-        i = ICONS.get(tag['icon'])['emoji']
-        if not i:
-            i = '# '
+    for k,v in ts.items():
+        i = ICONS.get(v['icon'])['emoji'] or '? '
         if includeIds:
-            tags_str = tags_str + t + ': ' + i + '  ' + tag['title'] + '     '
+            tags_str = tags_str + k + ': ' + i + '  ' + v['title'] + '     '
         else:
-            tags_str = tags_str + i + '  ' + tag['title'] + '  '
+            tags_str = tags_str + i + '  ' + v['title'] + '  '
     return tags_str
 
 def iconsToString():
     icon_str = ''
-    for i in ICONS:
-        icon_str = icon_str + i + ':' + ICONS.get(i)['emoji'] + ', '
+    for k,v in ICONS.items():
+        icon_str = icon_str + k + ':' + v['emoji'] + ', '
     return icon_str
 
 def unlockEntry(e):
-    if e is None or e['success'] is False or e['export'] is True:
+    entry_id = e[0]; entry = e[1]
+    if e is None or entry['success'] is False or entry['export'] is True:
         return None
-    e['success'] = False;e['export'] = True
+    entry['success'] = False; entry['export'] = True
     try:   
         getClient()
         keys = trezorapi.getTrezorKeys(client)
-        plain_nonce = trezorapi.getDecryptedNonce(client, e)
+        plain_nonce = trezorapi.getDecryptedNonce(client, entry)
     except:
         raise Exception('Error while accessing trezor device')    
     try:
-        e['password']['data'] = cryptomodul.decryptEntryValue(plain_nonce, e['password']['data'])
-        e['password']['type'] = 'String'
-        e['safe_note']['data'] = cryptomodul.decryptEntryValue(plain_nonce, e['safe_note']['data'])
-        e['safe_note']['type'] = 'String'
+        entry['password']['data'] = cryptomodul.decryptEntryValue(plain_nonce, entry['password']['data'])
+        entry['password']['type'] = 'String'
+        entry['safe_note']['data'] = cryptomodul.decryptEntryValue(plain_nonce, entry['safe_note']['data'])
+        entry['safe_note']['type'] = 'String'
     except:
         raise Exception('Error while decrypting entry')
-    e['success'] = True
+    entry['success'] = True
+    e[1] = entry
     return e
 
-def lockEntry(e): 
-    if e is None or e['success'] is False or e['export'] is False:
+def lockEntry(e):
+    entry_id = e[0]; entry = e[1]
+    if e is None or entry['success'] is False or entry['export'] is False:
         return None
-    e['success'] = False;e['export'] = False
+    entry['success'] = False; entry['export'] = False
     try:
         getClient()
         keys = trezorapi.getTrezorKeys(client)
-        e['nonce'] = trezorapi.getEncryptedNonce(client, e)
-        plain_nonce = trezorapi.getDecryptedNonce(client, e)
+        entry['nonce'] = trezorapi.getEncryptedNonce(client, entry)
+        plain_nonce = trezorapi.getDecryptedNonce(client, entry)
     except:
         raise Exception('Error while accessing trezor device')
     try:
-        e['password']['data'] = cryptomodul.encryptEntryValue(plain_nonce, json.dumps(e['password']['data']))
-        e['safe_note']['data'] = cryptomodul.encryptEntryValue(plain_nonce, json.dumps(e['safe_note']['data']))
+        entry['password']['data'] = cryptomodul.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']))
+        entry['safe_note']['data'] = cryptomodul.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']))
     except:
         raise Exception('Error while decrypting entry')
-    e['password']['type'] = 'Buffer';e['safe_note']['type'] = 'Buffer'
-    e['success'] = True
+    entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
+    entry['success'] = True
+    e[1] = entry
     return e
 
-def insertEntry(entry, entry_id=None):
+def insertEntry(e):
     global db_json
     global entries
-
-    if not entry_id:
-        for e in entries:
-            entry_id = str(int(e) + 1)
+    entry_id = e[0]; entry = e[1]
+    if e is None:
+        return
+    if entry_id == '':
+        entry_id = str(max(int(entries.keys()) + 1))
     if entry and entry['success'] is True and entry['export'] is False:
         entries.update( {entry_id : entry} )
         return True
@@ -295,18 +289,20 @@ def insertEntry(entry, entry_id=None):
         raise Exception('Error detected while inserting Entry, aborted')
 
 def editEntry(e):
-    if e['export'] is False:
+    entry_id = e[0]; entry = e[1]
+    if entry['export'] is False:
         e = unlockEntry(e)
-    if e['success'] is False:
+    if entry['success'] is False:
         return None
-    e['success'] = False
+    entry['success'] = False
     click.echo(tagsToString(tags, True))
     click.echo('Choose a tag')
-    inputTag = click.prompt(click.style('[tag(s)] ', bold=True), type=click.Choice(tags), default=e['tags'])
+    inputTag = click.prompt(click.style('[tag(s)] ', bold=True), type=click.Choice(tags), default=entry['tags'])
     if int(inputTag) == '0':
-        e['tags'] = []
-    e['tags'] = [int(inputTag)]
-    edit_json = {'item/url*':e['note'], 'title':e['title'], 'username':e['username'], 'password':e['password']['data'], 'secret':e['safe_note']['data']}
+        entry['tags'] = []
+    else:
+        entry['tags'] = [int(inputTag)]
+    edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data']}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
     if edit_json:
         try:
@@ -316,18 +312,29 @@ def editEntry(e):
         if edit_json['item/url*'] is None or edit_json['item/url*'] == '':
             click.echo('item/url* field is mandatory')
             return None
-        e['note'] = edit_json['item/url*'];e['title'] = edit_json['title'];e['username'] = edit_json['username'];e['password']['data'] = edit_json['password'];e['safe_note']['data'] = edit_json['secret']
-        e['success'] = True
+        entry['note'] = edit_json['item/url*'];entry['title'] = edit_json['title'];entry['username'] = edit_json['username'];entry['password']['data'] = edit_json['password'];entry['safe_note']['data'] = edit_json['secret']
+        entry['success'] = True
+        e[1] = entry
         return lockEntry(e)
     return None
 
 def editTag(t):
-    click.echo(iconsToString())
-    click.echo('Choose icon')
-    input_icon = click.prompt(click.style('[icon] ', bold=True), type=click.Choice(ICONS), default=t[1]['icon'])
-    input_title = click.prompt(click.style('[title]', bold=True), type=click.STRING, default=t[1]['title'])
-    t[1]['icon'] = input_icon; t[1]['title'] = input_title
+    tag_id = t[0]; tag = t[1]
+    click.echo(iconsToString() + '\n' + 'Choose icon')
+    tag['icon'] = click.prompt(click.style('[icon] ', bold=True), type=click.Choice(ICONS), default=tag['icon'])
+    tag['title'] = click.prompt(click.style('[title]', bold=True), type=click.STRING, default=tag['title'])
+    t[1] = tag
     return t
+
+def insertTag(t):
+    global db_json
+    tag_id = t[0]; tag = t[1]
+    if tag_id == '':
+        tag_id = str(max(int(tags.keys()) + 1))
+    if t:
+        db_json['tags'].update( {tag_id : tag} )
+    else:
+        click.echo('Error detected, aborted')
 
 def tabCompletionEntries(ctx, args, incomplete):
     loadConfig()
@@ -336,7 +343,7 @@ def tabCompletionEntries(ctx, args, incomplete):
     for k,v in tags.items():
         selEntries = getEntriesByTag(k)
         for kk,vv in selEntries.items():
-            tabs.append(v['title'].lower() + '/' + vv['note'].lower() + ':' + vv['username'].lower() + '{' + kk + '}')
+            tabs.append(v['title'].lower() + '/' + vv['note'].lower() + ':' + vv['username'].lower() + '#' + kk)
     return [k for k in tabs if incomplete.lower() in k]
 
 def tabCompletionTags(ctx, args, incomplete):
@@ -406,7 +413,7 @@ def find(name):# TODO alias
     unlockStorage()
     es = {}; ts = {}
     for k,v in entries.items():
-        if name.lower() in v['title'].lower() or name.lower() in v['note'].lower() or name.lower() in v['username'].lower():
+        if name.lower() in v['note'].lower() or name.lower() in v['title'].lower() or name.lower() in v['username'].lower():
             es.update( {k : v} ) 
     for k,v in tags.items():
         if name.lower() in v['title'].lower():
@@ -422,18 +429,11 @@ def find(name):# TODO alias
 def grep(name, caseinsensitive):
     '''Search for pattern in decrypted entries'''
     unlockStorage()
-    for e in entries:
-        e = unlockEntry(entries[e])
-        if name.lower() in e['title'].lower():
-            click.echo(click.style(e['note'] + ':' + e['username'], bold=True, fg='green') + click.style('//<title>//: ', fg='magenta') + e['title'].lower())
-        elif name.lower() in e['note'].lower():
-            click.echo(click.style(e['note'] + ':' + e['username'], bold=True, fg='green') + click.style('//<item/url*>//: ', fg='magenta') + e['note'].lower())
-        elif name.lower() in e['username'].lower():
-            click.echo(click.style(e['note'] + ':' + e['username'], bold=True, fg='green') + click.style('//<username>//: ', fg='magenta') + e['username'].lower())
-        elif name.lower() in e['password']['data'].lower():
-            click.echo(click.style(e['note'] + ':' + e['username'], bold=True, fg='green') + click.style('//<password>//: ', fg='magenta') + e['password']['data'].lower())
-        elif name.lower() in e['safe_note']['data'].lower():
-            click.echo(click.style(e['note'] + ':' + e['username'], bold=True, fg='green') + click.style('//<secret>//: ', fg='magenta') + e['safe_note']['data'].lower())
+    for k, v in entries.items():
+        for kk, vv in v.items():
+            if kk in ['note', 'title', 'username', 'password', 'safe_note']:
+                if name.lower() in vv.lower():
+                    click.echo(click.style(entries[k]['note'] + ':', bold=True) + click.style(entries[k]['username'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<' + kk + '>//: ', fg='magenta') + vv)
     sys.exit(0)
 
 @cli.command()
@@ -462,29 +462,30 @@ def ls(tag_name):# TODO alias
 def show(entry_name, secrets, json): # TODO alias
     '''Decrypt and print an entry'''
     unlockStorage()
-    e = getEntry(entry_name)[1]
+    e = getEntry(entry_name)
     if e is None:
         return
+    entry = e[1]; entry_id = e[0]
 
     if not secrets:
         pwd = '********'
         safeNote = '********'
     else:
         e = unlockEntry(e)
-        pwd = e['password']['data']
-        safeNote = e['safe_note']['data']
+        pwd = entry['password']['data']
+        safeNote = entry['safe_note']['data']
     if json:
-        edit_json = {'item/url*':e['note'], 'title':e['title'], 'username':e['username'], 'password':pwd, 'secret':safeNote, 'tags':e['tags']}
+        edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':pwd, 'secret':safeNote, 'tags':entry['tags']}
         click.echo(edit_json)
     else:
         ts = {}
-        for i in e['tags']:
+        for i in entry['tags']:
             ts[i] = tags.get(str(i))
 
-        click.echo(
-            click.style('item/url*: ', bold=True) + e['note'] + '\n' +
-            click.style('title:     ', bold=True) + e['title'] + '\n' +
-            click.style('username:  ', bold=True) + e['username'] + '\n' +
+        click.echo(click.style('#' + entry_id, bold=True, fg='magenta') + '\n' +
+            click.style('item/url*: ', bold=True) + entry['note'] + '\n' +
+            click.style('title:     ', bold=True) + entry['title'] + '\n' +
+            click.style('username:  ', bold=True) + entry['username'] + '\n' +
             click.style('password:  ', bold=True) + pwd + '\n' +
             click.style('secret:    ', bold=True) + safeNote  + '\n' +
             click.style('tags:      ', bold=True) + tagsToString(ts))
@@ -563,7 +564,7 @@ def generate(insert, typeof, clip, seperator, force, length, entropy):
         e['password']['data'] = pwd
         e = lockEntry(e)
         if force or click.confirm('Insert password in entry ' + click.style(entries[entry_id]['title'], bold=True)):
-            insertEntry(e, entry_id)
+            insertEntry(e)
     if clip:
         pyperclip.copy(pwd)
         clearClipboard()
@@ -608,12 +609,9 @@ def insert(tag_name, entry_name, tag):
     unlockStorage()
     global db_json
     if tag is True:
-        if getTag(tag_name)[1]:
-            sys.exit(-1)
-        t = {None:{'title': '', 'icon': 'home'}}
-        t = editTag(t)
+        t = editTag(tag_new)
         if t is not None:
-            saveTag(t)
+            insertTag(t)
             saveStorage()
     else:
         if tag_name != '':
@@ -623,8 +621,7 @@ def insert(tag_name, entry_name, tag):
             tag = [t[0]]
         else:
             tag = []
-
-        e = editEntry(newEntry)
+        e = editEntry(entry_new)
         if e is not None:
             insertEntry(e)
             saveStorage()
@@ -638,23 +635,15 @@ def edit(entry_name, tag):
     unlockStorage()
     if tag:
         t = getTag(tag)
-        tag_id = t[0]
-        t = t[1]
-        if t is None:
-            sys.exit(-1)
         t = editTag(t)
         if t is not None:
-            saveTag(t, tag_id)
+            insertTag(t)
             saveStorage()
     else:
         e = getEntry(entry_name)
-        entry_id = e[0]
-        e = e[1]
-        if e is None:
-            sys.exit(-1)
         e = editEntry(e)
         if e is not None:
-            insertEntry(e, entry_id)
+            insertEntry(e)
             saveStorage()
     sys.exit(0)
 
@@ -711,17 +700,18 @@ def lock():
 @cli.command()
 def exportdb(tag_name, entry_name, path, fileformat):
     '''Export data base'''
+    global entries
     unlockStorage()
     with click.progressbar(entries, label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:
         for e in bar:
-            entries[e] = unlockEntry(entries[e])
+            entries[e] = unlockEntry(e)[1]
     if fileformat == 'json':
         with open(os.path.join('.', 'export.json'), 'w', encoding='utf8') as f:
             json.dump(entries, f)
     elif fileformat == 'csv':
         with open(os.path.join('.', 'export.csv'), 'w') as f:
             writer = csv.writer(f, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            for e in entries:
+            for e in entries.items():
                 writer.writerow({e['note'], e['title'], e['username'],e['password']['data'],e['safe_note']['data']})
     sys.exit(0)
 
@@ -731,6 +721,8 @@ def exportdb(tag_name, entry_name, path, fileformat):
 def importdb(es):
     '''Import data base'''
     unlockStorage()
-    for e in es:
+    for e in es.items():
         lockEntry(e)
+        insert(e)
+        saveStorage()
     sys.exit(0)
