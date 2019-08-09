@@ -11,10 +11,11 @@
 ** TODO click aliase
 ** TODO support for case sensitive Names
 ** TODO show IDs on entries ?
+** TODO multiple tags per entrie in editEntry 
 
 
 
-
+** DONE use wordlist.txt from config path if aviable, fallback .
 ** DONE grep
 ** DONE TPM compatible
 ** DONE no saveOnDisk option

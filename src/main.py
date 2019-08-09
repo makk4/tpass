@@ -19,7 +19,7 @@ GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps'
 DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
 CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
 CONFIG_FILE = os.path.join(CONFIG_PATH, 'config.json')
-WORDLIST = os.path.join(CONFIG_PATH, 'wordlist.txt')
+DICEWARE_FILE = os.path.join(CONFIG_PATH, 'wordlist.txt')
 TMP = os.path.join(tempfile.gettempdir())
 DEV_SHM = os.path.join('/', 'dev', 'shm')
 CLIPBOARD_CLEAR_TIME = 15
@@ -128,6 +128,24 @@ def saveStorage():
         subprocess.call('git commit -m "update db"', cwd=config['store_path'], shell=True)
         subprocess.call('git add *.pswd', cwd=config['store_path'], shell=True)
 
+def loadWordlist():
+    wordlist_txt = DICEWARE_FILE
+    if not os.path.isfile(DICEWARE_FILE):
+        wordlist_txt = os.path.join('wordlist.txt')
+    words = {}
+    try:
+        with open(wordlist_txt) as f:
+            for line in f.readlines():
+                if re.compile('^([1-6]){5}\t(.)+$').match(line):
+                    key, value = line.rstrip('\n').split('\t')
+                    if(not key in words):
+                        words[key] = value
+                    else:
+                        return False
+    except:
+        raise IOError('error while processing wordlist.txt file')
+    return words
+
 def clearClipboard():
     with click.progressbar(length=config['clipboardClearTimeSec'], label='Clipboard will clear', show_percent=False, fill_char='=', empty_char=' ') as bar:
         for i in bar:
@@ -179,7 +197,7 @@ def getTag(tag_name):
 def getEntriesByTag(tag_id):
     es = {}
     for k, v in entries.items():
-        if int(tag_id) in v['tags'] or int(tag_id) == 0:
+        if int(tag_id) in v['tags'] or int(tag_id) == 0 and v['tags'] == []:
             es.update( {k : v} )  
     return es
 
@@ -240,8 +258,7 @@ def unlockEntry(e):
     except:
         raise Exception('Error while decrypting entry')
     entry['success'] = True
-    e[1] = entry
-    return e
+    return entry_id, entry
 
 def lockEntry(e):
     entry_id = e[0]; entry = e[1]
@@ -262,8 +279,7 @@ def lockEntry(e):
         raise Exception('Error while decrypting entry')
     entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
     entry['success'] = True
-    e[1] = entry
-    return e
+    return entry_id, entry
 
 def insertEntry(e):
     global db_json
@@ -305,7 +321,7 @@ def editEntry(e):
             return None
         entry['note'] = edit_json['item/url*'];entry['title'] = edit_json['title'];entry['username'] = edit_json['username'];entry['password']['data'] = edit_json['password'];entry['safe_note']['data'] = edit_json['secret']
         entry['success'] = True
-        e[1] = entry
+        e = (entry_id, entry)
         return lockEntry(e)
     return None
 
@@ -316,8 +332,7 @@ def editTag(t):
     click.echo(iconsToString() + '\n' + 'Choose icon')
     tag['icon'] = click.prompt(click.style('[icon] ', bold=True), type=click.Choice(ICONS), default=tag['icon'])
     tag['title'] = click.prompt(click.style('[title]', bold=True), type=click.STRING, default=tag['title'])
-    t[1] = tag
-    return t
+    return tag_id, tag
 
 def insertTag(t):
     global db_json
@@ -337,6 +352,7 @@ def removeTag(t):
     es = getEntriesByTag(tag_id)
     for e in es:
         entries[e]['tags'].remove(int(tag_id))
+    return True
 
 def tabCompletionEntries(ctx, args, incomplete):
     loadConfig()
@@ -470,7 +486,7 @@ def show(entry_name, secrets, json): # TODO alias
         pwd = entry['password']['data']
         safeNote = entry['safe_note']['data']
     if json:
-        edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':pwd, 'secret':safeNote, 'tags':entry['tags']}
+        edit_json = {entry_id:{'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':pwd, 'secret':safeNote, 'tags':entry['tags']}}
         click.echo(edit_json)
     else:
         ts = {}
@@ -518,36 +534,24 @@ def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
 @click.option('-s', '--seperator', default=' ', type=click.STRING, help='seperator for passphrase')
 @click.option('-f', '--force', is_flag=True, help='force without confirmation')
 @click.option('-d', '--entropy', is_flag=True, help='entropy from trezor device and host mixed')
-def generate(insert, typeof, clip, seperator, force, length, entropy):
+def generate(length, insert, typeof, clip, seperator, force, entropy):
     '''Generate new password'''
     global db_json
     if (length < 6 and typeof is 'password') or (length < 3 and typeof is 'wordlist') or (length < 4 and typeof is 'pin'):
-        click.echo(length + ' is too short for password with type ' + typeof)
-        sys.exit(-1)
+        if not click.confirm('Warning: ' + length + ' is too short for password with type ' + typeof + '. Continue?'):
+            sys.exit(-1)
     if entropy:
         getClient()
         entropy = trezorapi.getEntropy(client, length)
     else:
         entropy = None
     if typeof == 'wordlist':
-        words = {}
-        try:
-            with open(WORDLIST) as f:
-                for line in f.readlines():
-                    if re.compile('^([1-6]){5}\t(.)+$').match(line):
-                        key, value = line.rstrip('\n').split('\t')
-                        if(not key in words):
-                            words[key] = value
-                        else:
-                            sys.exit(-1)
-        except:
-            click.echo('error while processing wordlist.txt file')
+        words = loadWordlist()
         pwd = cryptomodul.generatePassphrase(length, words, seperator, entropy)
     elif typeof == 'pin':
         pwd = cryptomodul.generatePin(length)
-    else:
+    elif typeof == 'password':
         pwd = cryptomodul.generatePassword(length)
-
     if insert:
         unlockStorage()
         e = getEntry(insert)
@@ -619,13 +623,13 @@ def edit(entry_name, tag):
     if tag:
         t = getTag(tag)
         t = editTag(t)
-        insertTag(t)
-        saveStorage()
+        if insertTag(t):
+            saveStorage()
     else:
         e = getEntry(entry_name)
         e = editEntry(e)
-        insertEntry(e)
-        saveStorage()
+        if insertEntry(e):
+            saveStorage()
     sys.exit(0)
 
 @cli.command()
