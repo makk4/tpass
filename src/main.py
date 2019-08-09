@@ -448,10 +448,15 @@ def grep(name, caseinsensitive):
     '''Search for pattern in decrypted entries'''
     unlockStorage()
     for k, v in entries.items():
+        v = unlockEntry((k,v))[1]
         for kk, vv in v.items():
-            if kk in ['note', 'title', 'username', 'password', 'safe_note']:
+            if kk in ['note', 'title', 'username']:
                 if name.lower() in vv.lower():
-                    click.echo(click.style(entries[k]['note'] + ':', bold=True) + click.style(entries[k]['username'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<' + kk + '>//: ', fg='magenta') + vv)
+                    click.echo(click.style(v['note'] + ':', bold=True) + click.style(v['username'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<' + kk + '>//: ', fg='blue') + vv)
+        if name.lower() in v['password']['data'].lower():    
+            click.echo(click.style(v['note'] + ':', bold=True) + click.style(v['username'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<password>//: ', fg='blue') + v['password']['data'])
+        if name.lower() in v['safe_note']['data'].lower():  
+            click.echo(click.style(v['note'] + ':', bold=True) + click.style(v['username'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<secret>//: ', fg='blue') + v['safe_note']['data'])
     sys.exit(0)
 
 @cli.command()
