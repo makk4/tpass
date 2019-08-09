@@ -14,7 +14,7 @@ pip3 install tpass
 Manual
 ```
   git clone git@github:makk4/hellopass-cli.git
-  python setup.py install
+  python3 setup.py install --user
 ```
 ### Autocompletion
 #### Bash
@@ -31,7 +31,7 @@ and add this to your .bashrc
 ```
 and add this to your .zshrc
 ```
- . /path/to/tpass-complete.sh
+ .  ~/.oh-my-zsh/plugins/tpass-complete.sh
 ```
 ## Init
 ```

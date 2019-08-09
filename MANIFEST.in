@@ -1,0 +1,4 @@
+include README.md
+include wordlist.txt
+recursive-include src *.py
+recursive-include test *.py
