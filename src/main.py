@@ -163,36 +163,29 @@ def getEntry(name):
     note = name[1]; username = name[2]; entry_id = name[3]
     if entry_id != '':
         return entry_id, entries[entry_id]
-    for e in entries.items():
-        entry = e[1]
-        if note.lower() == entry['note'].lower():
-            if username == '' or username.lower() == entry['username'].lower():
-                return e
+    for k, v in entries.items():
+        if note.lower() == v['note'].lower():
+            if username == '' or username.lower() == v['username'].lower():
+                return k, v
     return None
 
 def getTag(tag_name):
-    tag_name = tag_name.split('/')[0]
-    for t in tags.items():
-        tag = t[1]
-        if tag_name == tag['title'].lower():
-            return t
+    tag_name = parseName(tag_name)[0]
+    for k, v in tags.items():
+        if tag_name.lower() == v['title'].lower():
+            return k, v
     return None
 
 def getEntriesByTag(tag_id):
     es = {}
-    for k,v in entries.items():
-        ts = v['tags']
-        if tag_id == '0' and ts == []:
-            es.update( {k : v} )
-        elif ts != []:
-            for t in ts:
-                if t == tag_id:
-                    es.update( {k : v} )      
+    for k, v in entries.items():
+        if int(tag_id) in v['tags'] or int(tag_id) == 0:
+            es.update( {k : v} )  
     return es
 
 def printEntries(es, includeTree=False):
     if includeTree:
-        start = '  ├──';start_end = '  └──'
+        start = '  ├── ';start_end = '  └── '
     else:
         start = ''; start_end = ''
     i = 0
@@ -206,9 +199,7 @@ def printEntries(es, includeTree=False):
 def printTags(ts, includeEntries=False):
     tag_str = ''
     for k,v in ts.items():
-        icon = ICONS.get(v['icon'])['emoji']
-        if icon is None:
-            icon = '#'
+        icon = ICONS.get(v['icon'])['emoji'] or '? '
         click.echo(icon + '  ' + click.style(v['title'] + '',bold=True , fg='blue'))
         if includeEntries:
             es = getEntriesByTag(k)
@@ -217,11 +208,11 @@ def printTags(ts, includeEntries=False):
 def tagsToString(ts, includeIds=False):
     tags_str = ''
     for k,v in ts.items():
-        i = ICONS.get(v['icon'])['emoji'] or '? '
+        icon = ICONS.get(v['icon'])['emoji'] or '? '
         if includeIds:
-            tags_str = tags_str + k + ': ' + i + '  ' + v['title'] + '     '
+            tags_str = tags_str + k + ': ' + icon + '  ' + v['title'] + '     '
         else:
-            tags_str = tags_str + i + '  ' + v['title'] + '  '
+            tags_str = tags_str + icon + '  ' + v['title'] + '  '
     return tags_str
 
 def iconsToString():
@@ -277,12 +268,12 @@ def lockEntry(e):
 def insertEntry(e):
     global db_json
     global entries
-    entry_id = e[0]; entry = e[1]
     if e is None:
-        return
+        return False
+    entry_id = e[0]; entry = e[1]
     if entry_id == '':
         entry_id = str(max(int(entries.keys()) + 1))
-    if entry and entry['success'] is True and entry['export'] is False:
+    if entry['success'] is True and entry['export'] is False:
         entries.update( {entry_id : entry} )
         return True
     else:
@@ -319,6 +310,8 @@ def editEntry(e):
     return None
 
 def editTag(t):
+    if t is None:
+        return None
     tag_id = t[0]; tag = t[1]
     click.echo(iconsToString() + '\n' + 'Choose icon')
     tag['icon'] = click.prompt(click.style('[icon] ', bold=True), type=click.Choice(ICONS), default=tag['icon'])
@@ -328,13 +321,22 @@ def editTag(t):
 
 def insertTag(t):
     global db_json
+    if t is None:
+        return False
     tag_id = t[0]; tag = t[1]
     if tag_id == '':
         tag_id = str(max(int(tags.keys()) + 1))
-    if t:
-        db_json['tags'].update( {tag_id : tag} )
-    else:
-        click.echo('Error detected, aborted')
+    db_json['tags'].update( {tag_id : tag} )
+    return True
+
+def removeTag(t):
+    if t is None:
+        return False
+    tag_id = t[0]; tag = t[1]
+    del db_json['tags'][tag_id]
+    es = getEntriesByTag(tag_id)
+    for e in es:
+        entries[e]['tags'].remove(int(tag_id))
 
 def tabCompletionEntries(ctx, args, incomplete):
     loadConfig()
@@ -441,18 +443,11 @@ def grep(name, caseinsensitive):
 def ls(tag_name):# TODO alias
     '''List names of passwords from tag'''
     unlockStorage()
-    ts = {}
     if tag_name == '':
         printTags(tags, True)
-    elif tag_name.lower() == 'all' or tag_name.lower() == 'all/':
-        t = getTag(tag_name)
-        ts[t[0]] = t[1]
-        printTags(ts)
-        printEntries(entries, True)
     else:
         t = getTag(tag_name)
-        ts[t[0]] = t[1]
-        printTags(ts, True)
+        printTags({t[0] : t[1]}, True)
     sys.exit(0)
     
 @cli.command()
@@ -556,15 +551,12 @@ def generate(insert, typeof, clip, seperator, force, length, entropy):
     if insert:
         unlockStorage()
         e = getEntry(insert)
-        entry_id = e[0]
-        e = e[1]
-        if e is None:
-            return
         e = unlockEntry(e)
-        e['password']['data'] = pwd
+        e[1]['password']['data'] = pwd
         e = lockEntry(e)
-        if force or click.confirm('Insert password in entry ' + click.style(entries[entry_id]['title'], bold=True)):
-            insertEntry(e)
+        if insertEntry(e):
+            if force or click.confirm('Insert password in entry ' + click.style(e[1]['title'], bold=True)):
+                saveStorage()
     if clip:
         pyperclip.copy(pwd)
         clearClipboard()
@@ -582,21 +574,16 @@ def rm(entry_name, tag, force):# TODO alias
     unlockStorage()
     global db_json
     if tag:
-        tag_id = getTag(tag)[0]
-        if not tag_id or tag_id == '0':
-            sys.exit(-1)
-        if force or click.confirm('Delete tag: ' + click.style(tags[tag_id]['title'], bold=True)):
-            del db_json['tags'][tag_id]
-            es = getEntriesByTag(tag_id)
-            for e in es:
-                entries[e]['tags'].remove(int(tag_id))
+        t = getTag(tag)
+        if t[0] == '0':
+            sys.exit(0)
+        removeTag(t)
+        if force or click.confirm('Delete tag: ' + click.style(t[1]['title'], bold=True)):
             saveStorage()
     else:
         entry_id = getEntry(entry_name)[0]
-        if not entry_id:
-            sys.exit(-1)
+        del db_json['entries'][entry_id]
         if force or click.confirm('Delete entry ' + click.style(entries[entry_id]['title'], bold=True)):
-            del db_json['entries'][entry_id]
             saveStorage()
     sys.exit(0)
 
@@ -608,22 +595,18 @@ def insert(tag_name, entry_name, tag):
     '''Insert entry or tag'''
     unlockStorage()
     global db_json
-    if tag is True:
+    global entry_new
+    if tag:
         t = editTag(tag_new)
-        if t is not None:
-            insertTag(t)
+        if insertTag(t):
             saveStorage()
     else:
         if tag_name != '':
             t = getTag(tag_name)
-            if t[1] is None:
-                sys.exit(-1)
-            tag = [t[0]]
-        else:
-            tag = []
+            if t is not None:
+                entry_new['tag'] = [int(t[0])]
         e = editEntry(entry_new)
-        if e is not None:
-            insertEntry(e)
+        if insertEntry(e):
             saveStorage()
     sys.exit(0)
 
@@ -636,15 +619,13 @@ def edit(entry_name, tag):
     if tag:
         t = getTag(tag)
         t = editTag(t)
-        if t is not None:
-            insertTag(t)
-            saveStorage()
+        insertTag(t)
+        saveStorage()
     else:
         e = getEntry(entry_name)
         e = editEntry(e)
-        if e is not None:
-            insertEntry(e)
-            saveStorage()
+        insertEntry(e)
+        saveStorage()
     sys.exit(0)
 
 @cli.command()
