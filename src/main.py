@@ -28,7 +28,7 @@ newEntry = {'title': '', 'username': '', 'password': {'type': 'String', 'data': 
 entries = {}
 tags = {'0': {'title': 'All', 'icon': 'home'}, }
 db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
-config = {'file_name': '', 'store_path': DROPBOX_PATH, 'cloud_provider': 'dropbox', 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True}
+config = {'file_name': '', 'store_path': DEFAULT_PATH, 'cloud_provider': 'dropbox', 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True}
 client = None
 
 '''
@@ -127,8 +127,6 @@ def saveStorage():
         subprocess.call('git commit -m "update db"', cwd=config['store_path'], shell=True)
         subprocess.call('git add *.pswd', cwd=config['store_path'], shell=True)
 
-    return True
-
 def clearClipboard():
     with click.progressbar(length=config['clipboardClearTimeSec'], label='Clipboard will clear', show_percent=False, fill_char='=', empty_char=' ') as bar:
         for i in bar:
@@ -148,51 +146,56 @@ def getClient():
 
 def parseName(input_str):
     tag = ''; titleOrNote = ''; username = ''
-    if '/' in input_str:
+    if '/' in input_str and ':' in input_str:
         tag = input_str.split('/')[0]
-        titleOrNote = input_str.split('/')[1]
-    if ':' in input_str:
         titleOrNote = input_str.split('/')[1].split(':')[0]
         username = input_str.split(':')[1]
+    elif '/' in input_str:
+        tag = input_str.split('/')[0]
+        titleOrNote = input_str.split('/')[1]
+    elif ':' in input_str:
+        titleOrNote = input_str.split(':')[0]
+        username = input_str.split(':')[1]
+    else:
+        tag = titleOrNote = input_str
     return tag, titleOrNote, username
 
 def getEntry(name):
     name = parseName(name)
-    titleOrNote = name[1]
+    note = name[1]
     username = name[2]
-    for e in entries:
-        if titleOrNote.lower() == entries[e]['note'].lower() or titleOrNote.lower() == entries[e]['title'].lower():
-            if username is None or username.lower() == entries[e]['username'].lower():
-                return str(e), entries[e]
-    return None, None
+    for e in entries.items():
+        entry = e[1]
+        if note.lower() == entry['note'].lower():
+            if username == '' or username.lower() == entry['username'].lower():
+                return e
+    return None
 
 def getTag(tag_name):
     tag_name = tag_name.split('/')[0]
-    for t in tags:
-        if tag_name == tags[t]['title'].lower():
-            return str(t), tags[t]
-    return None, None
+    for t in tags.items():
+        tag = t[1]
+        if tag_name == tag['title'].lower():
+            return t
+    return None
 
-def saveTag(tag, tag_id=None):
+def saveTag(tag):
     global db_json
-    if tag_id is None:
-        for t in tags:
-            tag_id = str(int(t) + 1)
     if tag:
-        db_json['tags'].update( {tag_id : tag} )
+        db_json['tags'].update( {tag[0] : tag[1]} )
     else:
         click.echo('Error detected, aborted')
 
 def getEntriesByTag(tag_id):
     es = {}
-    for e in entries:
-        ts = entries[e]['tags']
+    for k,v in entries.items():
+        ts = v['tags']
         if tag_id == '0' and ts == []:
-            es[e] = entries[e]
-        else:
+            es.update( {k : v} )
+        elif ts != []:
             for t in ts:
-                if t == int(tag_id):
-                    es[e] = entries[e]        
+                if t == tag_id:
+                    es.update( {k : v} )      
     return es
 
 def printEntries(es, includeTree=False):
@@ -200,23 +203,23 @@ def printEntries(es, includeTree=False):
         start = '  ├──';start_end = '  └──'
     else:
         start = ''; start_end = ''
-    for i, e in enumerate(es):
+    i = 0
+    for k,v in es.items():
         if i == len(es)-1:
-            click.echo(start_end + es[e]['note'] + ':' + click.style(es[e]['username'], fg='green'))
+            click.echo(start_end + v['note'] + ':' + click.style(v['username'], fg='green') + click.style('(' + k + ')', fg='magenta'))
         else:
-            click.echo(start + es[e]['note'] + ':' + click.style(es[e]['username'], fg='green'))
+            click.echo(start + v['note'] + ':' + click.style(v['username'], fg='green') + click.style('(' + k + ')', fg='magenta'))
+        i = i + 1
 
 def printTags(ts, includeEntries=False):
     tag_str = ''
-    for t in ts:
-        tag_id = t
-        t = tags.get(tag_id)
-        icon = ICONS.get(t['icon'])['emoji']
+    for k,v in ts.items():
+        icon = ICONS.get(v['icon'])['emoji']
         if icon is None:
             icon = '#'
-        click.echo(icon + '  ' + click.style(t['title'] + '',bold=True , fg='blue'))
+        click.echo(icon + '  ' + click.style(v['title'] + '',bold=True , fg='blue'))
         if includeEntries:
-            es = getEntriesByTag(tag_id)
+            es = getEntriesByTag(k)
             printEntries(es, True)
 
 def tagsToString(ts, includeIds=False):
@@ -300,6 +303,8 @@ def editEntry(e):
     click.echo(tagsToString(tags, True))
     click.echo('Choose a tag')
     inputTag = click.prompt(click.style('[tag(s)] ', bold=True), type=click.Choice(tags), default=e['tags'])
+    if int(inputTag) == '0':
+        e['tags'] = []
     e['tags'] = [int(inputTag)]
     edit_json = {'item/url*':e['note'], 'title':e['title'], 'username':e['username'], 'password':e['password']['data'], 'secret':e['safe_note']['data']}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
@@ -319,20 +324,19 @@ def editEntry(e):
 def editTag(t):
     click.echo(iconsToString())
     click.echo('Choose icon')
-    input_icon = click.prompt(click.style('[icon] ', bold=True), type=click.Choice(ICONS), default=t['icon'])
-    input_title = click.prompt(click.style('[title]', bold=True), type=click.STRING, default=t['title'])
-    t['icon'] = input_icon
-    t['title'] = input_title
+    input_icon = click.prompt(click.style('[icon] ', bold=True), type=click.Choice(ICONS), default=t[1]['icon'])
+    input_title = click.prompt(click.style('[title]', bold=True), type=click.STRING, default=t[1]['title'])
+    t[1]['icon'] = input_icon; t[1]['title'] = input_title
     return t
 
 def tabCompletionEntries(ctx, args, incomplete):
     loadConfig()
     unlockStorage()
     tabs = []
-    for t in tags:
-        selEntries = getEntriesByTag(t)
-        for e in selEntries:
-            tabs.append(tags[t]['title'].lower() + '/' + selEntries[e]['note'].lower() + ':' + selEntries[e]['username'].lower())
+    for k,v in tags.items():
+        selEntries = getEntriesByTag(k)
+        for kk,vv in selEntries.items():
+            tabs.append(v['title'].lower() + '/' + vv['note'].lower() + ':' + vv['username'].lower() + '{' + kk + '}')
     return [k for k in tabs if incomplete.lower() in k]
 
 def tabCompletionTags(ctx, args, incomplete):
@@ -401,13 +405,12 @@ def find(name):# TODO alias
     '''List names of passwords and tags that match names'''
     unlockStorage()
     es = {}; ts = {}
-    for e in entries:
-        e = entries[e]
-        if name.lower() in e['title'].lower() or name.lower() in e['note'].lower() or name.lower() in e['username'].lower():
-            es[str(e)] = e
-    for t in tags:
-        if name.lower() in tags[t]['title'].lower():
-            ts[str(t)] = tags[t]
+    for k,v in entries.items():
+        if name.lower() in v['title'].lower() or name.lower() in v['note'].lower() or name.lower() in v['username'].lower():
+            es.update( {k : v} ) 
+    for k,v in tags.items():
+        if name.lower() in v['title'].lower():
+            ts.update( {k : v} ) 
     printEntries(es)
     printTags(ts)
     sys.exit(0)
@@ -422,15 +425,15 @@ def grep(name, caseinsensitive):
     for e in entries:
         e = unlockEntry(entries[e])
         if name.lower() in e['title'].lower():
-            click.echo(click.style(e['title'] + ':' + e['username'], bold=True, fg='green') + click.style('//<title>//: ', fg='magenta') + e['title'].lower())
+            click.echo(click.style(e['note'] + ':' + e['username'], bold=True, fg='green') + click.style('//<title>//: ', fg='magenta') + e['title'].lower())
         elif name.lower() in e['note'].lower():
-            click.echo(click.style(e['title'] + ':' + e['username'], bold=True, fg='green') + click.style('//<item/url*>//: ', fg='magenta') + e['note'].lower())
+            click.echo(click.style(e['note'] + ':' + e['username'], bold=True, fg='green') + click.style('//<item/url*>//: ', fg='magenta') + e['note'].lower())
         elif name.lower() in e['username'].lower():
-            click.echo(click.style(e['title'] + ':' + e['username'], bold=True, fg='green') + click.style('//<username>//: ', fg='magenta') + e['username'].lower())
+            click.echo(click.style(e['note'] + ':' + e['username'], bold=True, fg='green') + click.style('//<username>//: ', fg='magenta') + e['username'].lower())
         elif name.lower() in e['password']['data'].lower():
-            click.echo(click.style(e['title'] + ':' + e['username'], bold=True, fg='green') + click.style('//<password>//: ', fg='magenta') + e['password']['data'].lower())
+            click.echo(click.style(e['note'] + ':' + e['username'], bold=True, fg='green') + click.style('//<password>//: ', fg='magenta') + e['password']['data'].lower())
         elif name.lower() in e['safe_note']['data'].lower():
-            click.echo(click.style(e['title'] + ':' + e['username'], bold=True, fg='green') + click.style('//<secret>//: ', fg='magenta') + e['safe_note']['data'].lower())
+            click.echo(click.style(e['note'] + ':' + e['username'], bold=True, fg='green') + click.style('//<secret>//: ', fg='magenta') + e['safe_note']['data'].lower())
     sys.exit(0)
 
 @cli.command()
@@ -440,9 +443,8 @@ def ls(tag_name):# TODO alias
     unlockStorage()
     ts = {}
     if tag_name == '':
-        ts = tags
-        printTags(ts, True)
-    if tag_name.lower() == 'all' or tag_name.lower() == 'all/':
+        printTags(tags, True)
+    elif tag_name.lower() == 'all' or tag_name.lower() == 'all/':
         t = getTag(tag_name)
         ts[t[0]] = t[1]
         printTags(ts)
@@ -450,8 +452,6 @@ def ls(tag_name):# TODO alias
     else:
         t = getTag(tag_name)
         ts[t[0]] = t[1]
-        if t[1] is None:
-            return
         printTags(ts, True)
     sys.exit(0)
     
@@ -610,7 +610,7 @@ def insert(tag_name, entry_name, tag):
     if tag is True:
         if getTag(tag_name)[1]:
             sys.exit(-1)
-        t = {'title': '', 'icon': 'home'}
+        t = {None:{'title': '', 'icon': 'home'}}
         t = editTag(t)
         if t is not None:
             saveTag(t)
