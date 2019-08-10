@@ -1,8 +1,11 @@
+asn1crypto==0.24.0
 certifi==2019.6.16
+cffi==1.12.3
 chardet==3.0.4
 Click==7.0
 colorama==0.4.1
 construct==2.9.45
+cryptography==2.7
 ecdsa==0.13.2
 idna==2.8
 libusb1==1.7.1
@@ -10,9 +13,12 @@ mnemonic==0.18
 pbkdf2==1.3
 pkg-resources==0.0.0
 pyblake2==1.1.2
+pycparser==2.19
+pyperclip==1.7.0
 requests==2.22.0
 shamir-mnemonic==0.1.0
--e git+git@github.com:makk4/tpass.git@7f01de0e2560c70d5d667d36ce109f9d7832c95d#egg=tpass
+six==1.12.0
+-e git+git@github.com:makk4/tpass.git@0e7cde1f6ad73e3c6d6cd52a7356e73c043ffdf5#egg=tpass
 trezor==0.11.4
 typing-extensions==3.7.4
 urllib3==1.25.3
