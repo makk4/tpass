@@ -31,47 +31,44 @@ entry_new = {'':{'title': '', 'username': '', 'password': {'type': 'String', 'da
 tags = {'0': {'title': 'All', 'icon': 'home'}, }
 entries = {}
 db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
-config = {'file_name': '', 'store_path': DEFAULT_PATH, 'cloud_provider': 'dropbox', 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True}
+CONFIG = {'file_name': '', 'store_path': DEFAULT_PATH, 'cloud_provider': 'dropbox', 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True}
 client = None
 
 '''
 Core Methods
 '''
 def loadConfig():
-    global config
+    global CONFIG
     if not os.path.isfile(CONFIG_FILE):
         writeConfig()
     with open(CONFIG_FILE) as f:
-        config = json.load(f)
-    if 'file_name' not in config or 'store_path' not in config or 'pinentry' not in config or 'clipboardClearTimeSec' not in config or 'storeMetaDataOnDisk' not in config:
+        CONFIG = json.load(f)
+    if 'file_name' not in CONFIG or 'store_path' not in CONFIG or 'pinentry' not in CONFIG or 'clipboardClearTimeSec' not in CONFIG or 'storeMetaDataOnDisk' not in CONFIG:
         click.echo('config parse error: ' + CONFIG_PATH)
-        sys.exit(-1)
-    if not os.path.exists(config['store_path']):
-        click.echo('config: path error' + config['store_path'])
         sys.exit(-1)
 
 def writeConfig():
     if not os.path.exists(CONFIG_PATH):    
         os.mkdir(CONFIG_PATH)
     with open(CONFIG_FILE, 'w', encoding='utf8') as f:
-        json.dump(config, f, indent=4)
+        json.dump(CONFIG, f, indent=4)
  
 def unlockStorage():
     global db_json
     global entries
     global tags
-    db_file = os.path.join(config['store_path'], config['file_name'])
+    db_file = os.path.join(CONFIG['store_path'], CONFIG['file_name'])
 
-    if config['file_name'] == '' or not os.path.isfile(db_file):
+    if CONFIG['file_name'] == '' or not os.path.isfile(db_file):
         sys.exit(-1)
     tmp_path = DEV_SHM
-    tmp_file = os.path.join(tmp_path, config['file_name'] + '.json')
+    tmp_file = os.path.join(tmp_path, CONFIG['file_name'] + '.json')
 
     if not os.path.exists(DEV_SHM):
         click.echo('warning: /dev/shm not found on host, using not as secure /tmp/ for plain metadata')
-        tmp_file = os.path.join(TMP, config['file_name'] + '.json')
+        tmp_file = os.path.join(TMP, CONFIG['file_name'] + '.json')
     cond_old_tmp_file = not os.path.isfile(tmp_file) or (os.path.isfile(tmp_file) and (os.path.getmtime(tmp_file) < os.path.getmtime(db_file)))
-    cond_not_saving = config['storeMetaDataOnDisk'] is False
+    cond_not_saving = CONFIG['storeMetaDataOnDisk'] is False
     if cond_not_saving or cond_old_tmp_file:
         try:
             getClient()
@@ -79,9 +76,9 @@ def unlockStorage():
             encKey = keys[2]
         except:
             raise Exception('Error while getting keys from device')
-        config['file_name'] = keys[0]
+        CONFIG['file_name'] = keys[0]
 
-        db_file = os.path.join(config['store_path'], config['file_name'])
+        db_file = os.path.join(CONFIG['store_path'], CONFIG['file_name'])
         try:
             db_json = cryptomodul.decryptStorage(db_file, encKey)
         except:
@@ -89,18 +86,18 @@ def unlockStorage():
         entries = db_json['entries']
         tags = db_json['tags']
 
-        if config['storeMetaDataOnDisk'] is True:
+        if CONFIG['storeMetaDataOnDisk'] is True:
             with open(tmp_file, 'w') as f:  
                 json.dump(db_json, f)
 
-    if config['storeMetaDataOnDisk'] is True:
+    if CONFIG['storeMetaDataOnDisk'] is True:
         with open(tmp_file) as f:
             db_json = json.load(f)
             entries = db_json['entries']
             tags = db_json['tags']
 
 def saveStorage():
-    global config
+    global CONFIG
     tmp_file = DEV_SHM
 
     getClient()
@@ -114,21 +111,21 @@ def saveStorage():
     fileName = keys[0]
     encKey = keys[2]
     tmp_file = os.path.join(tmp_file, fileName + '.json')
-    config['file_name'] = fileName
-    db_file = os.path.join(config['store_path'], config['file_name'])
+    CONFIG['file_name'] = fileName
+    db_file = os.path.join(CONFIG['store_path'], CONFIG['file_name'])
 
     try:
         cryptomodul.encryptStorage(db_json, db_file, encKey)
     except:
         raise Exception('Error while encrypting storage')
 
-    if config['storeMetaDataOnDisk'] is True and os.path.isfile(db_file):
+    if CONFIG['storeMetaDataOnDisk'] is True and os.path.isfile(db_file):
         with open(tmp_file, 'w') as f:
             json.dump(db_json, f)
     
-    if config['cloud_provider'] == 'git':
-        subprocess.call('git commit -m "update db"', cwd=config['store_path'], shell=True)
-        subprocess.call('git add *.pswd', cwd=config['store_path'], shell=True)
+    if CONFIG['cloud_provider'] == 'git':
+        subprocess.call('git commit -m "update db"', cwd=CONFIG['store_path'], shell=True)
+        subprocess.call('git add *.pswd', cwd=CONFIG['store_path'], shell=True)
 
 def loadWordlist():
     wordlist_txt = DICEWARE_FILE
@@ -149,7 +146,7 @@ def loadWordlist():
     return words
 
 def clearClipboard():
-    with click.progressbar(length=config['clipboardClearTimeSec'], label='Clipboard will clear', show_percent=False, fill_char='=', empty_char=' ') as bar:
+    with click.progressbar(length=CONFIG['clipboardClearTimeSec'], label='Clipboard will clear', show_percent=False, fill_char='=', empty_char=' ') as bar:
         for i in bar:
             time.sleep(1)
     pyperclip.copy('')
@@ -373,7 +370,7 @@ def tabCompletionTags(ctx, args, incomplete):
 
 def tabCompletionConfig(ctx, args, incomplete):
     loadConfig()
-    return [k for k in config if incomplete.lower() in k]
+    return [k for k in CONFIG if incomplete.lower() in k]
 '''
 CLI Methods
 '''
@@ -404,7 +401,7 @@ def cli():
 @click.option('-d', '--no-disk', is_flag=False, help='do not store metadata on disk')
 def init(path, cloud, pinentry, no_disk):
     '''Initialize new password storage'''
-    global config
+    global CONFIG
     if cloud == 'googledrive':
         path = GOOGLE_DRIVE_PATH
     elif cloud == 'dropbox':
@@ -414,9 +411,9 @@ def init(path, cloud, pinentry, no_disk):
     if len(os.listdir(path)) != 0:
         click.echo(path + ' is not empty, not initialized', err=True)
         exit(-1)
-    config['file_name'] = 'init'; config['store_path'] = path; config['cloud_provider'] = cloud; config['pinentry'] = pinentry; config['storeMetaDataOnDisk'] = no_disk
+    CONFIG['file_name'] = 'init'; CONFIG['store_path'] = path; CONFIG['cloud_provider'] = cloud; CONFIG['pinentry'] = pinentry; CONFIG['storeMetaDataOnDisk'] = no_disk
     if cloud == 'git':
-        subprocess.call('git init', cwd=config['store_path'], shell=True)
+        subprocess.call('git init', cwd=CONFIG['store_path'], shell=True)
         click.echo('password store initialized with git in ' + path)
     saveStorage()
     writeConfig()
@@ -491,7 +488,7 @@ def show(entry_name, secrets, json): # TODO alias
         safeNote = entry['safe_note']['data']
     if json:
         edit_json = {entry_id:{'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':pwd, 'secret':safeNote, 'tags':entry['tags']}}
-        click.echo(edit_json)
+        click.echo(json.dumps(edit_json))
     else:
         ts = {}
         for i in entry['tags']:
@@ -532,13 +529,13 @@ def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
     
 @cli.command()# TODO callback eager options
 @click.argument('length', default=15, type=int)
-@click.option('-i', '--insert','entry-name', default=None, type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
+@click.option('-i', '--insert', default=None, type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
 @click.option('-c', '--clip', is_flag=True, help='copy to clipboard')
 @click.option('-t', '--type','type_', default='password', type=click.Choice(['password', 'wordlist', 'pin']), help='type of password')
 @click.option('-s', '--seperator', default=' ', type=click.STRING, help='seperator for passphrase')
 @click.option('-f', '--force', is_flag=True, help='force without confirmation')
 @click.option('-d', '--entropy', is_flag=True, help='entropy from trezor device and host mixed')
-def generate(length, entry_name, type_, clip, seperator, force, entropy):
+def generate(length, insert, type_, clip, seperator, force, entropy):
     '''Generate new password'''
     global db_json
     if (length < 6 and type_ is 'password') or (length < 3 and type_ is 'wordlist') or (length < 4 and type_ is 'pin'):
@@ -556,9 +553,9 @@ def generate(length, entry_name, type_, clip, seperator, force, entropy):
         pwd = cryptomodul.generatePin(length)
     elif type_ == 'password':
         pwd = cryptomodul.generatePassword(length)
-    if entry_name:
+    if insert:
         unlockStorage()
-        e = getEntry(entry_name)
+        e = getEntry(insert)
         e = unlockEntry(e)
         e[1]['password']['data'] = pwd
         e = lockEntry(e)
@@ -640,7 +637,7 @@ def edit(entry_name, tag):
 @click.argument('commands', type=click.STRING, nargs=-1)
 def git(commands):
     '''Call git commands on db storage'''
-    subprocess.call('git '+ ' '.join(commands), cwd=config['store_path'], shell=True)
+    subprocess.call('git '+ ' '.join(commands), cwd=CONFIG['store_path'], shell=True)
     sys.exit(0)
 
 @cli.command()
@@ -650,7 +647,7 @@ def git(commands):
 @click.argument('setting-value', type=click.STRING, default='None', nargs=1)
 def config(edit, reset, setting_name, setting_value):
     '''Configuration settings'''
-    global config
+    global CONFIG
     if edit:
         click.edit(filename=CONFIG_FILE, require_save=True)
     elif reset:
@@ -671,9 +668,9 @@ def unlock(force):
 @cli.command()
 def lock():
     '''Remove Plain Metadata file from disk'''
-    tmp_file = os.path.join(DEV_SHM, config['file_name'] + '.json')
+    tmp_file = os.path.join(DEV_SHM, CONFIG['file_name'] + '.json')
     if not os.path.exists(DEV_SHM):
-        tmp_file = os.path.join(TMP, config['file_name'] + '.json')
+        tmp_file = os.path.join(TMP, CONFIG['file_name'] + '.json')
     if os.path.isfile(tmp_file):
         os.remove(tmp_file)
         click.echo(click.style('metadata deleted: ', bold=True) + tmp_file)
@@ -712,6 +709,6 @@ def importdb(es):
     unlockStorage()
     for e in es.items():
         lockEntry(e)
-        insert(e)
+        insertEntry(e)
         saveStorage()
     sys.exit(0)
