@@ -1,4 +1,5 @@
 * Basic features
+** TODO Print unicode symbols correct
 ** TODO ask for password
 ** TODO Export
 *** DONE json
@@ -7,15 +8,13 @@
 *** DONE json
 *** TODO CSV
 ** TODO device entropy
-** DONE return values and input of getters int() str() ? --> ids
 ** TODO click aliase
 ** TODO support for case sensitive Names
-** DONE show IDs on entries ?
 ** TODO multiple tags per entrie in editEntry 
 ** TODO simplejson error checking
 
-
-
+** DONE return values and input of getters int() str() ? --> ids
+** DONE show IDs on entries ?
 ** DONE use wordlist.txt from config path if aviable, fallback .
 ** DONE grep
 ** DONE TPM compatible

@@ -184,14 +184,14 @@ def getEntry(name):
         if note.lower() == v['note'].lower():
             if username == '' or username.lower() == v['username'].lower():
                 return k, v
-    return None
+    sys.exit('Error: ' + note + ':' + username + entry_id + ' is not in the password store')
 
 def getTag(tag_name):
     tag_name = parseName(tag_name)[0]
     for k, v in tags.items():
         if tag_name.lower() == v['title'].lower():
             return k, v
-    return None
+    sys.exit('Error: ' + tag_name + ' is not a tag in the password store')
 
 def getEntriesByTag(tag_id):#TODO optimze
     es = {}
@@ -244,18 +244,15 @@ def iconsToString():
     return icon_str
 
 def unlockEntry(e):
-    if e is None:
-        return
     entry_id = e[0]; entry = e[1]
-    if e is None or entry['success'] is False or entry['export'] is True:
-        return None
+    if entry['success'] is False or entry['export'] is True:
+        sys.exit('Error: while unlocking entry')
     entry['success'] = False; entry['export'] = True
     try:   
         getClient()
-        keys = trezorapi.getTrezorKeys(client)
         plain_nonce = trezorapi.getDecryptedNonce(client, entry)
     except:
-        raise Exception('Error while accessing trezor device')    
+        sys.exit('Error: while accessing trezor device')    
     try:
         entry['password']['data'] = cryptomodul.decryptEntryValue(plain_nonce, entry['password']['data'])
         entry['password']['type'] = 'String'
@@ -263,81 +260,72 @@ def unlockEntry(e):
         entry['safe_note']['type'] = 'String'
         entry['success'] = True
     except:
-        raise Exception('Error while decrypting entry')
+        sys.exit('Error: while decrypting entry')
     return entry_id, entry
 
 def lockEntry(e):
-    if e is None:
-        return
     entry_id = e[0]; entry = e[1]
-    if e is None or entry['success'] is False or entry['export'] is False:
-        return None
+    if entry['success'] is False or entry['export'] is False:
+        sys.exit('Error: while locking entry')
     entry['success'] = False; entry['export'] = False
     try:
         getClient()
-        keys = trezorapi.getTrezorKeys(client)
         entry['nonce'] = trezorapi.getEncryptedNonce(client, entry)
         plain_nonce = trezorapi.getDecryptedNonce(client, entry)
     except:
-        raise Exception('Error while accessing trezor device')
+        sys.exit('Error: while accessing trezor device')
     try:
         entry['password']['data'] = cryptomodul.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']))
         entry['safe_note']['data'] = cryptomodul.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']))
         entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
         entry['success'] = True
     except:
-        raise Exception('Error while decrypting entry')
+        sys.exit('Error: while decrypting entry')
     return entry_id, entry
 
 def insertEntry(e):
-    global db_json
     global entries
-    if e is None or e[1]['success'] is False or e[1]['export'] is True:
-        return False
     entry_id = e[0]; entry = e[1]
+    if entry['success'] is False or entry['export'] is True:
+        sys.exit('Error: while inserting entry')
     if entry_id == '':
         for k in entries.keys():
             entry_id = str(int(k) + 1)
         if entry_id == '':
             entry_id = '0'
     entries.update( {entry_id : entry} )
-    return True
 
 def editEntry(e):
-    if e is None:
-        return
     entry_id = e[0]; entry = e[1]
     if entry['export'] is False:
         e = unlockEntry(e)
     if entry['success'] is False:
-        return None
+        sys.exit('Error: while editing entry')
     entry['success'] = False
     click.echo(tagsToString(tags, True))
     click.echo('Choose a tag')
     inputTag = click.prompt(click.style('[tag(s)] ', bold=True), type=click.Choice(tags), default=entry['tags'])
-    if inputTag == '0':
-        entry['tags'] = []
-    elif inputTag:
-        entry['tags'] = [int(inputTag)]
     edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data'], 'tags': tags}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
-    if edit_json:#TODO simplifyinsert
+    if edit_json:
         try:
             edit_json = json.loads(edit_json)
         except:
-            raise IOError('edit gone wrong')
+            sys.exit('Error: edit gone wrong')
         if edit_json['item/url*'] is None or edit_json['item/url*'] == '':
-            click.echo('item/url* field is mandatory')
-            return None
+            sys.exit('item/url* field is mandatory')
         entry['note'] = edit_json['item/url*'];entry['title'] = edit_json['title'];entry['username'] = edit_json['username'];entry['password']['data'] = edit_json['password'];entry['safe_note']['data'] = edit_json['secret']
+    if inputTag:
+        if inputTag == '0':
+            entry['tags'] = []
+        entry['tags'] = [int(inputTag)]
         entry['success'] = True
         e = (entry_id, entry)
+    if inputTag or edit_json:   
         return lockEntry(e)
-    return None
+    sys.exit()
 
 def editTag(t):
-    if t is None:
-        return None
     tag_id = t[0]; tag = t[1]
     click.echo(iconsToString() + '\n' + 'Choose icon')
     tag['icon'] = click.prompt(click.style('[icon] ', bold=True), type=click.Choice(ICONS), default=tag['icon'])
@@ -345,27 +333,21 @@ def editTag(t):
     return tag_id, tag
 
 def insertTag(t):
-    global db_json
-    if t is None:
-        return False
+    global tags
     tag_id = t[0]; tag = t[1]
     if tag_id == '':
         for k in tags.keys():
             tag_id = str(int(k) + 1)
         if tag_id == '':
             tag_id = '0'
-    db_json['tags'].update( {tag_id : tag} )
-    return True
+    tags.update( {tag_id : tag} )
 
 def removeTag(t):
-    if t is None:
-        return False
     tag_id = t[0]; tag = t[1]
     del db_json['tags'][tag_id]
     es = getEntriesByTag(tag_id)
     for e in es:
         entries[e]['tags'].remove(int(tag_id))
-    return True
 
 def tabCompletionEntries(ctx, args, incomplete):
     loadConfig()
@@ -532,19 +514,18 @@ def show(entry_name, secrets, json): # TODO alias
 def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
     '''Decrypt and copy line of entry to clipboard'''
     unlockStorage()
-    e = getEntry(entry_name)[1]
-    if e is None:
-        sys.exit(-1)
+    e = getEntry(entry_name)
+    entry = e[1]; entry_id = e[0]
     if user:
-        pyperclip.copy(e['username'])
+        pyperclip.copy(entry['username'])
     elif url:
-        pyperclip.copy(e['title'])
+        pyperclip.copy(entry['title'])
     else:
         e = unlockEntry(e)
         if secret:
-            pyperclip.copy(e['password']['data'])
+            pyperclip.copy(entry['password']['data'])
         else:
-            pyperclip.copy(e['safe_note']['data'])
+            pyperclip.copy(entry['safe_note']['data'])
         clearClipboard()
     sys.exit(0)     
     
@@ -580,9 +561,9 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
         e = unlockEntry(e)
         e[1]['password']['data'] = pwd
         e = lockEntry(e)
-        if insertEntry(e):
-            if force or click.confirm('Insert password in entry ' + click.style(e[1]['title'], bold=True)):
-                saveStorage()
+        insertEntry(e)
+        if force or click.confirm('Insert password in entry ' + click.style(e[1]['title'], bold=True)):
+            saveStorage()
     if clip:
         pyperclip.copy(pwd)
         clearClipboard()
@@ -602,7 +583,7 @@ def rm(entry_name, tag, force):# TODO alias
     if tag:
         t = getTag(tag)
         if t[0] == '0':
-            sys.exit(0)
+            sys.exit('Error: cannot remove <all> tag')
         removeTag(t)
         if force or click.confirm('Delete tag: ' + click.style(t[1]['title'], bold=True)):
             saveStorage()
@@ -624,16 +605,15 @@ def insert(tag_name, entry_name, tag):
     global entry_new
     if tag:
         t = editTag(tag_new)
-        if insertTag(t):
-            saveStorage()
+        insertTag(t)
+        saveStorage()
     else:
         if tag_name != '':
             t = getTag(tag_name)
-            if t is not None:
-                entry_new[1]['tag'] = [int(t[0])]
+            entry_new[1]['tag'] = [int(t[0])]
         e = editEntry(entry_new)
-        if insertEntry(e):
-            saveStorage()
+        insertEntry(e)
+        saveStorage()
     sys.exit(0)
 
 @cli.command()#TODO option --entry/--tag with default
@@ -645,13 +625,13 @@ def edit(entry_name, tag):
     if tag:
         t = getTag(tag)
         t = editTag(t)
-        if insertTag(t):
-            saveStorage()
+        insertTag(t)
+        saveStorage()
     else:
         e = getEntry(entry_name)
         e = editEntry(e)
-        if insertEntry(e):
-            saveStorage()
+        insertEntry(e)
+        saveStorage()
     sys.exit(0)
 
 @cli.command()
