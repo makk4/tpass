@@ -178,7 +178,7 @@ def parseName(input_str):#TODO optimze
 def getEntry(name):
     name = parseName(name)
     note = name[1]; username = name[2]; entry_id = name[3]
-    if entry_id != '':
+    if entry_id != '' and entries.get(entry_id):
         return entry_id, entries[entry_id]
     for k, v in entries.items():
         if note.lower() == v['note'].lower():

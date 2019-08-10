@@ -52,6 +52,8 @@
 * optimizing
 ** TODO click aliase
 ** TODO switch to poetry
+** TODO screenshots
+** TODO wiki
 
 
 https://click.palletsprojects.com/en/7.x/bashcomplete/
