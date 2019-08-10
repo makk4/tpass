@@ -2,11 +2,14 @@
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from random import randint
-import json
 import os
 import string
 import random
 import secrets
+try:
+    import simplejson as json
+except:
+    import json
 
 CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
 WORDLIST = os.path.join(CONFIG_PATH, 'wordlist.txt')
