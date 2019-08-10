@@ -27,7 +27,7 @@ and add this to your .bashrc
 ```
 #### ZSH
 ```
-_TPASS_COMPLETE=source_zsh tpass > tpass-complete.sh
+_TPASS_COMPLETE=source_zsh tpass > ~/.oh-my-zsh/plugins/tpass-complete.sh
 ```
 and add this to your .zshrc
 ```
@@ -74,7 +74,7 @@ init      Initialize new password storage
 insert    Insert entry or tag
 lock      Remove Plain Metadata file from disk
 ls        List names of passwords from tag
-rm        Remove entry or tag
+rm        Remove entry or tag.  ~/.oh-my-zsh/plugins/tpass-complete.sh
 show      Decrypt and print an entry
 unlock    Unlock Storage and writes plain metadata to disk
 ```

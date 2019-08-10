@@ -22,9 +22,6 @@ setup(
     install_requires=[
         'click',
         'trezor',
-        'cryptography',
-        'pyperclip',
-        'pyotp',
     ],
     entry_points={
         'console_scripts': ['tpass=src.main:cli'],

@@ -26,12 +26,12 @@ TMP = os.path.join(tempfile.gettempdir())
 DEV_SHM = os.path.join('/', 'dev', 'shm')
 CLIPBOARD_CLEAR_TIME = 15
 
-tag_new = {'':{'title': '', 'icon': 'home'}}
-entry_new = {'':{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True}}
+tag_new = ('',{'title': '', 'icon': 'home'})
+entry_new = ('',{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True})
 tags = {'0': {'title': 'All', 'icon': 'home'}, }
 entries = {}
 db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
-CONFIG = {'file_name': '', 'store_path': DEFAULT_PATH, 'cloud_provider': 'dropbox', 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True}
+CONFIG = {'file_name': '', 'store_path': DEFAULT_PATH, 'cloud_provider': 'dropbox', 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True, 'showIcons': False}
 client = None
 
 '''
@@ -43,7 +43,7 @@ def loadConfig():
         writeConfig()
     with open(CONFIG_FILE) as f:
         CONFIG = json.load(f)
-    if 'file_name' not in CONFIG or 'store_path' not in CONFIG or 'pinentry' not in CONFIG or 'clipboardClearTimeSec' not in CONFIG or 'storeMetaDataOnDisk' not in CONFIG:
+    if 'file_name' not in CONFIG or 'store_path' not in CONFIG or 'pinentry' not in CONFIG or 'clipboardClearTimeSec' not in CONFIG or 'storeMetaDataOnDisk' not in CONFIG or 'showIcons' not in CONFIG:
         click.echo('config parse error: ' + CONFIG_PATH)
         sys.exit(-1)
 
@@ -214,10 +214,12 @@ def printEntries(es, includeTree=False):#TODO optimze
         i = i + 1
 
 def printTags(ts, includeEntries=False):
-    tag_str = ''
     for k,v in ts.items():
-        icon = ICONS.get(v['icon'])['emoji'] or '? '
-        click.echo(icon + '  ' + click.style(v['title'] + '',bold=True , fg='blue'))
+        if CONFIG['showIcons'] is True:
+            icon = ICONS.get(v['icon'])['emoji'] or '? '
+        else:
+            icon = ''
+        click.echo(icon + ' ' + click.style(v['title'] + '/',bold=True , fg='blue'))
         if includeEntries:
             es = getEntriesByTag(k)
             printEntries(es, True)
@@ -225,11 +227,14 @@ def printTags(ts, includeEntries=False):
 def tagsToString(ts, includeIds=False):
     tags_str = ''
     for k,v in ts.items():
-        icon = ICONS.get(v['icon'])['emoji'] or '? '
-        if includeIds:
-            tags_str = tags_str + k + ': ' + icon + '  ' + v['title'] + '     '
+        if CONFIG['showIcons'] is True:
+            icon = ICONS.get(v['icon'])['emoji'] or '? '
         else:
-            tags_str = tags_str + icon + '  ' + v['title'] + '  '
+            icon = ''
+        if includeIds:
+            tags_str = tags_str + k + ': ' + icon + ' ' + v['title'] + '/    '
+        else:
+            tags_str = tags_str + icon + ' ' + v['title'] + '/ '
     return tags_str
 
 def iconsToString():
@@ -239,6 +244,8 @@ def iconsToString():
     return icon_str
 
 def unlockEntry(e):
+    if e is None:
+        return
     entry_id = e[0]; entry = e[1]
     if e is None or entry['success'] is False or entry['export'] is True:
         return None
@@ -260,6 +267,8 @@ def unlockEntry(e):
     return entry_id, entry
 
 def lockEntry(e):
+    if e is None:
+        return
     entry_id = e[0]; entry = e[1]
     if e is None or entry['success'] is False or entry['export'] is False:
         return None
@@ -287,11 +296,16 @@ def insertEntry(e):
         return False
     entry_id = e[0]; entry = e[1]
     if entry_id == '':
-        entry_id = str(max(int(entries.keys()) + 1))
+        for k in entries.keys():
+            entry_id = str(int(k) + 1)
+        if entry_id == '':
+            entry_id = '0'
     entries.update( {entry_id : entry} )
     return True
 
 def editEntry(e):
+    if e is None:
+        return
     entry_id = e[0]; entry = e[1]
     if entry['export'] is False:
         e = unlockEntry(e)
@@ -303,11 +317,11 @@ def editEntry(e):
     inputTag = click.prompt(click.style('[tag(s)] ', bold=True), type=click.Choice(tags), default=entry['tags'])
     if inputTag == '0':
         entry['tags'] = []
-    else:
+    elif inputTag:
         entry['tags'] = [int(inputTag)]
     edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data'], 'tags': tags}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
-    if edit_json:#TODO simplify
+    if edit_json:#TODO simplifyinsert
         try:
             edit_json = json.loads(edit_json)
         except:
@@ -336,7 +350,10 @@ def insertTag(t):
         return False
     tag_id = t[0]; tag = t[1]
     if tag_id == '':
-        tag_id = str(max(int(tags.keys()) + 1))
+        for k in tags.keys():
+            tag_id = str(int(k) + 1)
+        if tag_id == '':
+            tag_id = '0'
     db_json['tags'].update( {tag_id : tag} )
     return True
 
@@ -398,10 +415,14 @@ def cli():
 @click.option('-p', '--path', default=DEFAULT_PATH, type=click.Path(), help='path to database')
 @click.option('-c', '--cloud', default='dropbox', type=click.Choice(['dropbox', 'googledrive', 'git']), help='cloud provider: <dropbox> <googledrive> <git>')
 @click.option('-a', '--pinentry', is_flag=True, help='ask for password on device')
-@click.option('-d', '--no-disk', is_flag=False, help='do not store metadata on disk')
+@click.option('-d', '--no-disk', is_flag=True, help='do not store metadata on disk')
 def init(path, cloud, pinentry, no_disk):
     '''Initialize new password storage'''
     global CONFIG
+    if no_disk:
+        no_disk = False
+    else:
+        no_disk = True
     if cloud == 'googledrive':
         path = GOOGLE_DRIVE_PATH
     elif cloud == 'dropbox':
@@ -488,7 +509,7 @@ def show(entry_name, secrets, json): # TODO alias
         safeNote = entry['safe_note']['data']
     if json:
         edit_json = {entry_id:{'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':pwd, 'secret':safeNote, 'tags':entry['tags']}}
-        click.echo(json.dumps(edit_json))
+        click.echo(edit_json)
     else:
         ts = {}
         for i in entry['tags']:
@@ -525,7 +546,7 @@ def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
         else:
             pyperclip.copy(e['safe_note']['data'])
         clearClipboard()
-    sys.exit(0)
+    sys.exit(0)     
     
 @cli.command()# TODO callback eager options
 @click.argument('length', default=15, type=int)
@@ -609,7 +630,7 @@ def insert(tag_name, entry_name, tag):
         if tag_name != '':
             t = getTag(tag_name)
             if t is not None:
-                entry_new['tag'] = [int(t[0])]
+                entry_new[1]['tag'] = [int(t[0])]
         e = editEntry(entry_new)
         if insertEntry(e):
             saveStorage()
