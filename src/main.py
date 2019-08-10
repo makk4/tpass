@@ -142,7 +142,7 @@ def loadWordlist():
                     else:
                         return False
     except:
-        raise IOError('error while processing wordlist.txt file')
+        sys.exit('Error: while processing wordlist.txt file')
     return words
 
 def clearClipboard():
@@ -157,7 +157,7 @@ def getClient():
         try:
             client = trezorapi.getTrezorClient()
         except:
-            raise Exception('Error while accessing trezor device')
+            sys.exit('Error while accessing trezor device')
 
 def parseName(input_str):#TODO optimze
     tag = ''; note = ''; username = ''; entry_id = ''
@@ -295,7 +295,7 @@ def insertEntry(e):
             entry_id = '0'
     entries.update( {entry_id : entry} )
 
-def editEntry(e):
+def editEntry(e): #TODO correct, simplify
     entry_id = e[0]; entry = e[1]
     if entry['export'] is False:
         e = unlockEntry(e)
@@ -439,7 +439,6 @@ def find(name):# TODO alias
     printTags(ts)
     sys.exit(0)
 
-# TODO generalize with kk, vv
 @cli.command()
 @click.argument('name', type=click.STRING, nargs=1)
 @click.option('-i', '--case-insensitive', is_flag=True, help='not case sensitive search')
@@ -511,7 +510,7 @@ def show(entry_name, secrets, json): # TODO alias
 @click.option('-i', '--url', is_flag=True, help='copy item/url*')
 @click.option('-s', '--secret', is_flag=True, help='copy secret')
 @click.argument('entry-name', type=click.STRING, nargs=1, autocompletion=tabCompletionEntries)
-def clip(user, url, secret, entry_name):# TODO alias; TODO open browser
+def clip(user, url, secret, entry_name):# TODO alias
     '''Decrypt and copy line of entry to clipboard'''
     unlockStorage()
     e = getEntry(entry_name)
@@ -662,8 +661,7 @@ def config(edit, reset, setting_name, setting_value):
 @click.option('-f', '--force', is_flag=True, help='omnit dialog')
 def unlock(force):
     '''Unlock Storage and writes plain metadata to disk'''
-    if force or click.confirm('Unlock storage?'):
-        unlockStorage()
+    unlockStorage()
     sys.exit(0)
 
 @cli.command()
@@ -679,13 +677,12 @@ def lock():
         click.echo(click.style('nothing to delete', bold=True)) 
     sys.exit(0)
 
-# TODO CSV
 @click.argument('tag-name', default='all', type=click.STRING, nargs=1, autocompletion=tabCompletionTags)
 @click.argument('entry-name', type=click.STRING, nargs=-1, autocompletion=tabCompletionEntries)
 @click.option('-p', '--path', default=os.path.expanduser('~'), type=click.Path(), help='path for export')
 @click.option('-f', '--file-format', default='json', type=click.Choice(['json', 'csv','txt']), help='file format')
 @cli.command()
-def exportdb(tag_name, entry_name, path, file_format):
+def exportdb(tag_name, entry_name, path, file_format):# TODO CSV
     '''Export data base'''
     global entries
     unlockStorage()
@@ -702,10 +699,9 @@ def exportdb(tag_name, entry_name, path, file_format):
                 writer.writerow({e['note'], e['title'], e['username'],e['password']['data'],e['safe_note']['data']})
     sys.exit(0)
 
-# TODO CSV    
 @cli.command()
 @click.option('-p', '--path', type=click.Path(), help='path to import file')
-def importdb(es):
+def importdb(es):# TODO CSV   
     '''Import data base'''
     unlockStorage()
     for e in es.items():

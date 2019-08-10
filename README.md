@@ -1,61 +1,39 @@
-# tpass
+# **tpass**
 
 Simple Trezor Password Manager interface for command line, inspired by pass.
 
 Untested Beta Software! - Do not use it
 
 
-## Install
+## **Install**
 
-Through PiP
 ```
-pip3 install tpass
+pip3 install --user tpass
+pip3 install --user -i https://test.pypi.org/simple/ tpass
 ```
-Manual
+or manual with git
 ```
 git clone git@github:makk4/tpass.git
 python3 setup.py install --user
 ```
-### Autocompletion
-#### Bash
+### **Autocompletion**
+#### **Bash**
 ```
 _TPASS_COMPLETE=source tpass > tpass-complete.sh
 ```
-and add this to your .bashrc
+and add this to your **.bashrc**
 ```
 . /path/to/tpass-complete.sh
 ```
-#### ZSH
+#### **ZSH**
 ```
 _TPASS_COMPLETE=source_zsh tpass > ~/.oh-my-zsh/plugins/tpass-complete.sh
 ```
-and add this to your .zshrc
+and add this to your **.zshrc**
 ```
 .  ~/.oh-my-zsh/plugins/tpass-complete.sh
 ```
-## Init
-```
-tpass init
-```
-### Features
-- Trezor Password Manager Compatible
-- supports Trezor One and Trezor Model T
-- cross plattform. Windows, Linux, MacOS
-- Dropbox, Google Drive, Git synchronisation
-- generate random Passwords and Passphrases
-- use your own Wordlists of coice, default is EFF large
-- list, insert, delete, edit entries
-- copy passwords to clipboard or show
-- export, import database in JSON, CSV
-- offline usage
-- do not store metadata on disk mode
-### Future plans:
-- Ask for password on Trezor device
-- TOTP support
-- Check for password leaks, online and with local DB
-- Support for Ledger Nano S/X, if possible
-- Staying compatible with TPM
-
+## **Usage**
 ```
 Options:
 --version  Show the version and exit.
@@ -78,3 +56,16 @@ rm        Remove entry or tag.  ~/.oh-my-zsh/plugins/tpass-complete.sh
 show      Decrypt and print an entry
 unlock    Unlock Storage and writes plain metadata to disk
 ```
+## **Features**
+
+- Trezor Password Manager Compatible
+- supports Trezor One and Trezor Model T
+- cross plattform. Windows, Linux, MacOS
+- Dropbox, Google Drive, Git synchronisation
+- generate random Passwords and Passphrases
+- use your own Wordlists of coice, default is EFF large
+- list, insert, delete, edit entries
+- copy passwords to clipboard or show
+- export, import database in JSON, CSV
+- offline usage
+- do not store metadata on disk mode

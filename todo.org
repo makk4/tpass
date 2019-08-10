@@ -1,17 +1,17 @@
 * Basic features
+** TODO Edit functions mor straightforward with multiple tags
+** TODO write unittests for every method
 ** TODO Print unicode symbols correct
-** TODO ask for password
+** TODO support for case sensitive Names
+** TODO simplejson error checking
+** TODO use python mapping and list functions, ex getEntries by Tag. map ->
+** TODO device entropy
 ** TODO Export
 *** DONE json
 *** TODO CSV
 ** TODO Import
 *** DONE json
 *** TODO CSV
-** TODO device entropy
-** TODO click aliase
-** TODO support for case sensitive Names
-** TODO multiple tags per entrie in editEntry 
-** TODO simplejson error checking
 
 ** DONE return values and input of getters int() str() ? --> ids
 ** DONE show IDs on entries ?
@@ -50,21 +50,10 @@
 *** DONE get entropy from device
 
 * optimizing
+** TODO click aliase
 ** TODO switch to poetry
-** TODO Code refactoring
-*** TODO create seperate core class for db operations
-*** TODO naming conventions tag_name -> tag_title
-** TODO Performance
-*** DONE ICONS improvment -> dict search
-*** TODO tags
-*** TODO entries
- 
-* Optional
-** TODO totp
 
-* Bugs
-** lockEntry, editEntry -> pwd + safNote not got encrypted
+
 https://click.palletsprojects.com/en/7.x/bashcomplete/
-
 eval "$(_TPASS_COMPLETE=source tpass)"
 eval "$(_TPASS_COMPLETE=source_zsh tpass)"
