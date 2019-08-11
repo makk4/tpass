@@ -23,7 +23,8 @@ setup(
         'click',
         'trezor',
         'cryptography',
-        'pyperclip'
+        'pyperclip',
+        'simplejson',
     ],
     entry_points={
         'console_scripts': ['tpass=src.main:cli'],
