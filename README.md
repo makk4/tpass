@@ -1,8 +1,13 @@
-# **tpass**
+# tpass - Trezor Password Manager CLI Interface
 
 Simple Trezor Password Manager interface for command line, inspired by pass.
 
 Untested Beta Software! - Do not use it
+
+## Table of contents
+* [Install](#Install)
+* [Usage](#Usage)
+* [Features](#Features)
 
 
 ## **Install**

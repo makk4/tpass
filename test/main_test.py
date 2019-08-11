@@ -18,6 +18,7 @@ DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR 
 entries = {}
 t_all = {"title": "All", "icon": "home"}
 tags = {"0": t_all, }
+edit_json = {'item/url*':"", 'title':"", 'username':"", 'password':"", 'secret':"", 'tags': "", "chooseFrom:": ""}
 db_json = {"version": "0.0.1", "extVersion": "0.6.0", "config": {"orderType": "date"}, "tags": tags, "entries": entries}
 config = { 'file_name': '', 'store_path': DROPBOX_PATH, 'cloud_provider': 'dropbox', 'pinentry': 'false'}
 newEntry_plain = {"title": "", "username": "", "password": "", "note": "", "tags": [], "safe_note": "", "note": "", "success": 'true', "export": 'true'}
@@ -99,7 +100,7 @@ class Tests_main(unittest.TestCase):
             path = '~/test_dropbox'
             if os.path.exists(path):
                 shutil.rmtree(path)
-            result = runner.invoke(main.conf, '-r')
+            result = runner.invoke(main.config, '--reset')
             result = runner.invoke(main.init, '-p ~/test_dropbox')
             assert result.exit_code == 0
             assert 'Please confirm action on your Trezor device' in result.output
@@ -108,23 +109,24 @@ class Tests_main(unittest.TestCase):
             # Test for detecting existing TMP File
             assert 'Please confirm action on your Trezor device' not in result.output
             assert "is not empty, not initialized" in result.output
+            shutil.rmtree(path)
 
             path = '~/test_git'
             if os.path.exists(path):
                 shutil.rmtree(path)
-            result = runner.invoke(main.conf, 'reset')
+            result = runner.invoke(main.config, '--reset')
             result = runner.invoke(main.init, '-p ~/test_git -c git')
             assert 'password store initialized with git in ' + path in result.output
             assert 'fatal: not a git repository (or any of the parent directories): .git' not in result.output
+            shutil.rmtree(path)
 
             path = '~/test_googledrive'
             if os.path.exists(path):
                 shutil.rmtree(path)
-            result = runner.invoke(main.conf, 'reset')
+            result = runner.invoke(main.config, '--reset')
             result = runner.invoke(main.init, '-p ~/test_googledrive')
             assert 'password store initialized in ' + path in result.output
-            if os.path.exists(path):
-                shutil.rmtree(path)
+            shutil.rmtree(path)
 
     def test_find(self):
         runner = CliRunner()
@@ -157,9 +159,10 @@ class Tests_main(unittest.TestCase):
         result = runner.invoke(main.conf, '-r')
         result = runner.invoke(main.init, '-p ~/test_dropbox')
         assert result.exit_code == 0
-        runner = CliRunner()
         result = runner.invoke(
-            main.insert, '')
+            main.insert, '', input=edit_json)
+        assert not result.exception
+        assert result.output == 'Foo: wau wau\nfoo=wau wau\n'
         assert '🏠  All' in result.output
         return
 
