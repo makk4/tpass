@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-from src import trezor as trezorapi
-from src import crypto as cryptomodul
+from src import trezor
+from src import crypto
 import click
 import os
 import subprocess
@@ -16,7 +16,7 @@ try:
 except:
     import json
     
-ICONS = {'home': {'emoji': '🏠'}, 'person-stalker': {'emoji': '👩‍👩‍👦'}, 'social-bitcoin': {'emoji': '₿'}, 'person': {'emoji': '😀'}, 'star': {'emoji': '⭐'}, 'flag': {'emoji': '🏳️'}, 'heart':{'emoji':'❤'}, 'settings': {'emoji':'⚙️'}, 'email':{'emoji':'✉️'},'cloud': {'emoji': '☁️'}, 'alert-circled': {'emoji':'⚠️'}, 'android-cart': {'emoji': '🛒'}, 'image': {'emoji': '🖼️'}, 'card': {'emoji': '💳'}, 'earth': {'emoji': '🌐'}, 'wifi': {'emoji': '📶'}}
+ICONS = {'home': {'emoji': u'\uE036'}, 'person-stalker': {'emoji': u"\U0001F469\u200D\U0001F467"}, 'social-bitcoin': {'emoji': '₿'}, 'person': {'emoji': '😀'}, 'star': {'emoji': '⭐'}, 'flag': {'emoji': '🏳️'}, 'heart':{'emoji':'❤'}, 'settings': {'emoji':'⚙️'}, 'email':{'emoji':'✉️'},'cloud': {'emoji': '☁️'}, 'alert-circled': {'emoji':'⚠️'}, 'android-cart': {'emoji': '🛒'}, 'image': {'emoji': '🖼️'}, 'card': {'emoji': '💳'}, 'earth': {'emoji': '🌐'}, 'wifi': {'emoji': '📶'}}
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
 DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
@@ -27,7 +27,7 @@ DEV_SHM = os.path.join('/', 'dev', 'shm')
 CLIPBOARD_CLEAR_TIME = 15
 CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'pinentry': False, 'defaultEditor': '', 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True, 'showIcons': False}
 DB_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
-TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'], '.json')
+TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
 
 tag_new = ('',{'title': '', 'icon': 'home'})
 entry_new = ('',{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True})
@@ -40,14 +40,16 @@ client = None
 Core Methods
 '''
 def load_config():
-    global CONFIG; global TMP_FILE
+    global CONFIG; global TMP_FILE; global DB_FILE
     if not os.path.isfile(CONFIG_FILE):
         write_config()
     with open(CONFIG_FILE) as f:
         CONFIG = json.load(f)
     if 'fileName' not in CONFIG or 'path' not in CONFIG or 'storeMetaDataOnDisk' not in CONFIG:
         sys.exit('Error: config parse error: ' + CONFIG_PATH)
+    DB_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
     if CONFIG['storeMetaDataOnDisk'] is True:
+        TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
         if not os.path.exists(DEV_SHM):
             TMP_FILE = os.path.join(tempfile.gettempdir(), CONFIG['fileName'] + '.json')
             logging.warning('Warning: /dev/shm not found on host, using not as secure /tmp for metadata')
@@ -61,20 +63,20 @@ def write_config():
  
 def unlock_storage():
     global db_json; global entries; global tags
-    tmpNeedUpdate = False
+    tmp_need_update = False
     if CONFIG['fileName'] == '' or not os.path.isfile(DB_FILE):
         sys.exit('Password store is not initialized')
     if CONFIG['storeMetaDataOnDisk'] is True:
-        tmpNeedUpdate = not os.path.isfile(TMP_FILE) or (os.path.isfile(TMP_FILE) and (os.path.getmtime(TMP_FILE) < os.path.getmtime(DB_FILE)))
-    if CONFIG['storeMetaDataOnDisk'] is False or tmpNeedUpdate:
+        tmp_need_update = not os.path.isfile(TMP_FILE) or (os.path.isfile(TMP_FILE) and (os.path.getmtime(TMP_FILE) < os.path.getmtime(DB_FILE)))
+    if CONFIG['storeMetaDataOnDisk'] is False or tmp_need_update:
         get_client()
         try:
-            keys = trezorapi.getTrezorKeys(client)
+            keys = trezor.getTrezorKeys(client)
             encKey = keys[2]
         except:
             sys.exit('Error while getting keys from device')
         try:
-            db_json = cryptomodul.decryptStorage(DB_FILE, encKey)
+            db_json = crypto.decryptStorage(DB_FILE, encKey)
         except Exception:
             sys.exit('Error while decrypting storage')
         entries = db_json['entries']; tags = db_json['tags']
@@ -90,12 +92,12 @@ def save_storage():
     global CONFIG
     get_client()
     try:
-        keys = trezorapi.getTrezorKeys(client)
+        keys = trezor.getTrezorKeys(client)
         encKey = keys[2]
     except Exception:
         sys.exit('Error while accessing trezor device')
     try:
-        cryptomodul.encryptStorage(db_json, DB_FILE, encKey)
+        crypto.encryptStorage(db_json, DB_FILE, encKey)
     except Exception:
         sys.exit('Error while encrypting storage')
     if CONFIG['storeMetaDataOnDisk'] is True:
@@ -130,7 +132,7 @@ def get_client():
     global client
     if client is None:
         try:
-            client = trezorapi.getTrezorClient()
+            client = trezor.getTrezorClient()
         except:
             sys.exit('Error while accessing trezor device')
 
@@ -150,7 +152,7 @@ def parse_name(input_str):
             note = input_str.split('/')[1].split(':')[0]
     return tag, note, username, entry_id
 
-def get_entry(name):
+def get_entry(name):#TODO optimze
     names = parse_name(name)
     note = names[1]; username = names[2]; entry_id = names[3]
     if entry_id != '' and entries.get(entry_id):
@@ -161,7 +163,7 @@ def get_entry(name):
                 return k, v
     sys.exit('Error: ' + name + ' is not in the password store')
 
-def get_tag(tag_name):
+def get_tag(tag_name):#TODO optimze
     tag_name = parse_name(tag_name)[0]
     for k, v in tags.items():
         if tag_name.lower() == v['title'].lower():
@@ -188,7 +190,7 @@ def print_entries(es, includeTree=False):#TODO optimze
             click.echo(start + v['note'] + ':' + click.style(v['username'], fg='green') + click.style('#' + k, fg='magenta'))
         i = i + 1
 
-def print_tags(ts, includeEntries=False):
+def print_tags(ts, includeEntries=False):#TODO optimze
     for k,v in ts.items():
         if CONFIG['showIcons'] is True:
             icon = ICONS.get(v['icon'])['emoji'] + ' ' or '? '
@@ -225,12 +227,12 @@ def unlock_entry(e):
     entry['success'] = False; entry['export'] = True
     try:   
         get_client()
-        plain_nonce = trezorapi.getDecryptedNonce(client, entry)
+        plain_nonce = trezor.getDecryptedNonce(client, entry)
     except Exception:
         sys.exit('Error: while accessing trezor device')    
     try:
-        entry['password']['data'] = cryptomodul.decryptEntryValue(plain_nonce, entry['password']['data'])
-        entry['safe_note']['data'] = cryptomodul.decryptEntryValue(plain_nonce, entry['safe_note']['data'])
+        entry['password']['data'] = crypto.decryptEntryValue(plain_nonce, entry['password']['data'])
+        entry['safe_note']['data'] = crypto.decryptEntryValue(plain_nonce, entry['safe_note']['data'])
         entry['password']['type'] = 'String'; entry['safe_note']['type'] = 'String'
         entry['success'] = True
     except Exception:
@@ -244,13 +246,13 @@ def lock_entry(e):
     entry['success'] = False; entry['export'] = False
     try:
         get_client()
-        entry['nonce'] = trezorapi.getEncryptedNonce(client, entry)
-        plain_nonce = trezorapi.getDecryptedNonce(client, entry)
+        entry['nonce'] = trezor.getEncryptedNonce(client, entry)
+        plain_nonce = trezor.getDecryptedNonce(client, entry)
     except Exception:
         sys.exit('Error: while accessing trezor device')
     try:
-        entry['password']['data'] = cryptomodul.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']))
-        entry['safe_note']['data'] = cryptomodul.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']))
+        entry['password']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']))
+        entry['safe_note']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']))
         entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
         entry['success'] = True
     except Exception:
@@ -328,8 +330,8 @@ def tab_completion_entries(ctx, args, incomplete):
     unlock_storage()
     tabs = []
     for k,v in tags.items():
-        selEntries = get_entries_by_tag(k)
-        for kk,vv in selEntries.items():
+        es = get_entries_by_tag(k)
+        for kk,vv in es.items():
             tabs.append(v['title'].lower() + '/' + vv['note'].lower() + ':' + vv['username'].lower() + '#' + kk)
     return [k for k in tabs if incomplete.lower() in k]
 
@@ -393,7 +395,7 @@ def init(path, cloud, pinentry, no_disk):
         subprocess.call('git init', cwd=CONFIG['path'], shell=True)
     get_client()
     try:
-        keys = trezorapi.getTrezorKeys(client)
+        keys = trezor.getTrezorKeys(client)
         CONFIG['fileName'] = keys[0]
     except:
         sys.exit('Error while getting keys from device')
@@ -525,16 +527,16 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
             sys.exit(-1)
     if entropy:
         get_client()
-        entropy = trezorapi.getEntropy(client, length)
+        entropy = trezor.getEntropy(client, length)
     else:
         entropy = None
     if type_ == 'wordlist':
         words = load_wordlist()
-        pwd = cryptomodul.generatePassphrase(length, words, seperator, entropy)
+        pwd = crypto.generatePassphrase(length, words, seperator, entropy)
     elif type_ == 'pin':
-        pwd = cryptomodul.generatePin(length)
+        pwd = crypto.generatePin(length)
     elif type_ == 'password':
-        pwd = cryptomodul.generatePassword(length)
+        pwd = crypto.generatePassword(length)
     if insert:
         unlock_storage()
         e = get_entry(insert)
@@ -647,11 +649,11 @@ def lock():
         click.echo(click.style('nothing to delete', bold=True)) 
     sys.exit(0)
 
+@cli.command()
 @click.argument('tag-name', default='all', type=click.STRING, nargs=1, autocompletion=tab_completion_tags)
 @click.argument('entry-name', type=click.STRING, nargs=-1, autocompletion=tab_completion_entries)
 @click.option('-p', '--path', default=os.path.expanduser('~'), type=click.Path(), help='path for export')
 @click.option('-f', '--file-format', default='json', type=click.Choice(['json', 'csv','txt']), help='file format')
-@cli.command()
 def exportdb(tag_name, entry_name, path, file_format):# TODO CSV
     '''Export password store'''
     global entries

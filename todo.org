@@ -1,11 +1,15 @@
 * Basic features
-** TODO editEntry -> use tag by name and check if exists?
+** TODO editEntry -> use tag by name or id and check if exists?
 ** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
 ** TODO simplejson error checking
 ** TODO write unittests for every method
+*** TODO docker emulator
 ** TODO support for case sensitive Names
 ** TODO Print unicode symbols correct
 ** TODO device entropy
+** TODO simplify trezorAPI
+** TODO get cryptomodul correct and save
+** TODO click aliase
 ** TODO Export
 *** DONE json
 *** TODO CSV
@@ -50,11 +54,12 @@
 *** DONE how get IV -> Random
 *** DONE get entropy from device
 
-* optimizing
-** TODO click aliase
-** TODO switch to poetry
+* repository
+** TODO switch to pipenv
+** DONE direnv
 ** TODO screenshots
 ** TODO wiki/docs
+** TODO subrepo trezorlib for testing
 
 
 https://click.palletsprojects.com/en/7.x/bashcomplete/

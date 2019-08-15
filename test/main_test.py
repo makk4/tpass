@@ -4,104 +4,104 @@ from src import trezor as trezorapi
 from trezorlib.client import get_default_client
 import os
 import json
-
 import unittest
 import click
 from click.testing import CliRunner
 import tempfile
 import shutil
 
-INIT_PASS = {"version": "0.0.1", "extVersion": "0.6.0", "config": {"orderType": "date"}, "tags": {"0": {"title": "All", "icon": "home"}, "1": {"title": "Social", "icon": "person-stalker"}, "2": {"title": "Bitcoin", "icon": "social-bitcoin"}}, "entries": {}}
+DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
+GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
+DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
 CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
 CONFIG_FILE = os.path.join(CONFIG_PATH, 'config.json')
-DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
-entries = {}
-t_all = {"title": "All", "icon": "home"}
-tags = {"0": t_all, }
-edit_json = {'item/url*':"", 'title':"", 'username':"", 'password':"", 'secret':"", 'tags': "", "chooseFrom:": ""}
-db_json = {"version": "0.0.1", "extVersion": "0.6.0", "config": {"orderType": "date"}, "tags": tags, "entries": entries}
-config = { 'file_name': '', 'store_path': DROPBOX_PATH, 'cloud_provider': 'dropbox', 'pinentry': 'false'}
-newEntry_plain = {"title": "", "username": "", "password": "", "note": "", "tags": [], "safe_note": "", "note": "", "success": 'true', "export": 'true'}
-newEntry_plain_failed = {"title": "", "username": "", "password": "", "note": "", "tags": [], "safe_note": "", "note": "", "success": 'false', "export": 'true'}
-newEntry = {"title": "", "username": "", 'password': {'type': 'Buffer', 'data': []}, "nonce": "", "tags": [], "safe_note": {'type': 'Buffer', 'data': []}, "note": "", "success": 'true', "export": 'false'}
-newEntry_failed = {"title": "", "username": "", 'password': {'type': 'Buffer', 'data': []}, "nonce": "", "tags": [], "safe_note": {'type': 'Buffer', 'data': []}, "note": "", "success": 'false', "export": 'false'}
+DICEWARE_FILE = os.path.join(CONFIG_PATH, 'wordlist.txt')
 
 class Tests_main(unittest.TestCase):
-
-    def test_core(self):
-        """
-        Testing Core Helper Methods
-        """
-        return
-
-        # loadConfig
-        if os.path.isfile(CONFIG_FILE):
-            os.remove(CONFIG_FILE)
-        result = main.loadConfig()
-        assert result == 0
-        # writeConfig
-        main.writeConfig()
-        assert os.path.isfile(CONFIG_FILE) is True
-        with open(CONFIG_FILE) as f:
-            c = json.load(f)
-            #assert c == config
-        # unlockStorage
-        # saveStorage
-
-        result = main.unlockStorage()
-        # getEntry 
-        result = main.getEntry('coinbase.com')
-        assert result[0] is '0'
-        #assert result[1] is e_coinbase
-        # getTag
-        result = main.getTag(tags, 'all')
-        assert result[1] == t_all
-        result = main.getTag(tags, 'all/')
-        assert result[1] == t_all
-        result = main.getTag(tags, 'All')
-        assert result[1] == t_all
-        result = main.getTag(tags, 'AlL')
-        assert result[1] == t_all
-        result = main.getTag(tags, 'AlL/')
-        assert result[1] == t_all
-        result = main.getTag(tags, 'AlL1')
-        assert result[1] == None
-        result = main.getTag(tags, 'Social')
-        assert result[1] == None
-        # printEntries
-        # printTags
-        # tagsToString
-        result = main.tagsToString(tags, False)
-        assert '🏠  All' in result
-        # unlockEntry
-        result = main.saveEntry(newEntry_plain_failed)
-        assert result == -1
-        # lockEntry
-        # editEntry
-        # saveEntry
-        # result = main.saveEntry(newEntry)
-        # assert result == 0
-        # result = main.saveEntry(newEntry_failed)
-        # assert result == -1
-        # result = main.saveEntry(newEntry_plain)
-        # assert result == -1
-        # result = main.saveEntry(newEntry_plain_failed)
-        # assert result == -1
-
     """
     Testing CLI Methods
     """
 
     def test_init(self):
-        return
+        """
+        Testing init
+        """
         runner = CliRunner()
 
         with runner.isolated_filesystem():
-            path = '~/test_dropbox'
+            """
+            tpass init
+            """
+            path = DEFAULT_PATH
+            if os.path.exists(DEFAULT_PATH):
+                shutil.rmtree(DEFAULT_PATH)
+            result = runner.invoke(main.config, '--reset')
+            result = runner.invoke(main.init)
+            assert result.exit_code == 0
+            assert 'Please confirm action on your Trezor device' in result.output
+            assert 'password store initialized in ' + DEFAULT_PATH in result.output
+            result = runner.invoke(main.init, '-p ~/test_dropbox')
+            # Test for detecting existing TMP File
+            assert 'Please confirm action on your Trezor device' not in result.output
+            assert "is not empty, not initialized" in result.output
+            shutil.rmtree(DEFAULT_PATH)
+            """
+            tpass init --cloud dropbox
+            """
+            if os.path.exists(DROPBOX_PATH):
+                shutil.rmtree(DROPBOX_PATH)
+            result = runner.invoke(main.config, '--reset')
+            result = runner.invoke(main.init, '-p ~/test_dropbox')
+            assert result.exit_code == 0
+            assert 'Please confirm action on your Trezor device' in result.output
+            assert 'password store initialized in ' + DROPBOX_PATH in result.output
+            result = runner.invoke(main.init, '-p ~/test_dropbox')
+            # Test for detecting existing TMP File
+            assert 'Please confirm action on your Trezor device' not in result.output
+            assert "is not empty, not initialized" in result.output
+            shutil.rmtree(DROPBOX_PATH)
+            """
+            tpass init --cloud git
+            """
+            if os.path.exists(DEFAULT_PATH):
+                shutil.rmtree(DEFAULT_PATH)
+            result = runner.invoke(main.config, '--reset')
+            result = runner.invoke(main.init, '-p ~/test_git -c git')
+            assert 'password store initialized in ' + path in result.output
+            assert 'fatal: not a git repository (or any of the parent directories): .git' not in result.output
+            shutil.rmtree(DEFAULT_PATH)
+            """
+            tpass init --cloud googledrive
+            """
+            if os.path.exists(GOOGLE_DRIVE_PATH):
+                shutil.rmtree(GOOGLE_DRIVE_PATH)
+            result = runner.invoke(main.config, '--reset')
+            result = runner.invoke(main.init, '--cloud googledrive')
+            assert 'password store initialized in ' + GOOGLE_DRIVE_PATH in result.output
+            shutil.rmtree(GOOGLE_DRIVE_PATH)
+            """
+            tpass init --no-disk
+            """
+            if os.path.exists(DEFAULT_PATH):
+                shutil.rmtree(DEFAULT_PATH)
+            result = runner.invoke(main.config, '--reset')
+            result = runner.invoke(main.init, '--nod-disk')
+            assert result.exit_code == 0
+            assert 'Please confirm action on your Trezor device' in result.output
+            assert 'password store initialized in ' + DEFAULT_PATH in result.output
+            result = runner.invoke(main.init, '-p ~/test_dropbox')
+            # Test not finding any tmp file
+            assert 'Please confirm action on your Trezor device' not in result.output
+            assert "is not empty, not initialized" in result.output
+            shutil.rmtree(DEFAULT_PATH)
+            """
+            tpass init --path <custom>
+            """
+            path = '~/.test_tpassword-store'
             if os.path.exists(path):
                 shutil.rmtree(path)
             result = runner.invoke(main.config, '--reset')
-            result = runner.invoke(main.init, '-p ~/test_dropbox')
+            result = runner.invoke(main.init, '--path "~/.tpassword-store"')
             assert result.exit_code == 0
             assert 'Please confirm action on your Trezor device' in result.output
             assert 'password store initialized in ' + path in result.output
@@ -111,31 +111,25 @@ class Tests_main(unittest.TestCase):
             assert "is not empty, not initialized" in result.output
             shutil.rmtree(path)
 
-            path = '~/test_git'
-            if os.path.exists(path):
-                shutil.rmtree(path)
-            result = runner.invoke(main.config, '--reset')
-            result = runner.invoke(main.init, '-p ~/test_git -c git')
-            assert 'password store initialized with git in ' + path in result.output
-            assert 'fatal: not a git repository (or any of the parent directories): .git' not in result.output
-            shutil.rmtree(path)
-
-            path = '~/test_googledrive'
-            if os.path.exists(path):
-                shutil.rmtree(path)
-            result = runner.invoke(main.config, '--reset')
-            result = runner.invoke(main.init, '-p ~/test_googledrive')
-            assert 'password store initialized in ' + path in result.output
-            shutil.rmtree(path)
-
     def test_find(self):
+        """
+        Testing find
+        """
+        runner = CliRunner()
+        if os.path.exists(DEFAULT_PATH):
+            shutil.rmtree(DEFAULT_PATH)
+        result = runner.invoke(main.config, '--reset')
+        result = runner.invoke(main.init)
+        return
         runner = CliRunner()
         result = runner.invoke(
             main.find, 'coin')
         assert 'coinbase.com' in result.output
         assert ' ₿  Bitcoin' in result.output
+        shutil.rmtree(DEFAULT_PATH)
     
     def test_ls(self):
+        return
         runner = CliRunner()
         result = runner.invoke(
             main.ls, '')
@@ -153,7 +147,6 @@ class Tests_main(unittest.TestCase):
     def test_insert(self):
         return
         runner = CliRunner()
-        path = '~/test_dropbox'
         if os.path.exists(path):
             shutil.rmtree(path)
         result = runner.invoke(main.conf, '-r')
