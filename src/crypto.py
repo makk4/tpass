@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-from random import randint
 import os
-import string
 import random
 import secrets
+import string
 try:
     import simplejson as json
 except:
     import json
-
-CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
-WORDLIST = os.path.join(CONFIG_PATH, 'wordlist.txt')
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from random import randint
 
 # @author:satoshilabs
 def decryptEntryValue(nonce, valArr):

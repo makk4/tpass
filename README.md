@@ -8,12 +8,11 @@ Untested Beta Software! - Do not use it
 * [Install](#Install)
 * [Usage](#Usage)
 * [Features](#Features)
-
+* [Docs](#Docs)
 
 ## **Install**
 
 ```
-pip3 install --user tpass
 pip3 install --user -i https://test.pypi.org/simple/ tpass
 ```
 or manual with git
@@ -32,16 +31,17 @@ and add this to your **.bashrc**
 ```
 #### **ZSH**
 ```
-_TPASS_COMPLETE=source_zsh tpass > ~/.oh-my-zsh/plugins/tpass-complete.sh
+_TPASS_COMPLETE=source_zsh tpass > ~/.oh-my-zsh/plugins/tpass/tpass-complete.sh
 ```
 and add this to your **.zshrc**
 ```
-.  ~/.oh-my-zsh/plugins/tpass-complete.sh
+.  ~/.oh-my-zsh/plugins/tpass/tpass-complete.sh
 ```
 ## **Usage**
 ```
 Options:
 --version  Show the version and exit.
+--debug    Show debug info
 --help     Show this message and exit.
 Commands:
 clip      Decrypt and copy line of entry to clipboard
@@ -74,3 +74,5 @@ unlock    Unlock Storage and writes plain metadata to disk
 - export, import database in JSON, CSV
 - offline usage
 - do not store metadata on disk mode
+
+## **Docs**

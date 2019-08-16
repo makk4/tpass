@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+import hashlib
+import hmac
+import os
+import random
+import sys
 from trezorlib import misc, ui
 from trezorlib.client import TrezorClient
 from trezorlib.tools import parse_path
@@ -7,11 +12,6 @@ from trezorlib.transport import get_transport
 from trezorlib.misc import get_entropy
 from trezorlib.misc import encrypt_keyvalue
 from urllib.parse import urlparse
-import hmac
-import hashlib
-import random
-import sys
-import os
 
 BIP32_PATH = parse_path("10016h/0")
 

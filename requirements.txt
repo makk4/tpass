@@ -11,14 +11,14 @@ idna==2.8
 libusb1==1.7.1
 mnemonic==0.18
 pbkdf2==1.3
-pkg-resources==0.0.0
 pyblake2==1.1.2
 pycparser==2.19
 pyperclip==1.7.0
 requests==2.22.0
 shamir-mnemonic==0.1.0
+simplejson==3.16.0
 six==1.12.0
--e git+git@github.com:makk4/tpass.git@0e7cde1f6ad73e3c6d6cd52a7356e73c043ffdf5#egg=tpass
+-e git+git@github.com:makk4/tpass.git@e71410edbee69303f6bffc7baa8b0515886ea607#egg=tpass
 trezor==0.11.4
 typing-extensions==3.7.4
 urllib3==1.25.3

@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/usr/bin/python3",
+    "python.pythonPath": ".direnv/python-3.7.4/bin/python",
     "python.testing.unittestArgs": [
         "-v",
         "-s",

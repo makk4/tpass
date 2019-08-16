@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-from src import trezor
-from src import crypto
 import click
+import csv
+import logging
 import os
+import pyperclip
+import re
 import subprocess
 import sys
-import csv
 import tempfile
-import pyperclip
 import time
-import re
-import logging
 try:
     import simplejson as json
 except:
     import json
+from src import trezor
+from src import crypto
     
 ICONS = {'home': {'emoji': u'\uE036'}, 'person-stalker': {'emoji': u"\U0001F469\u200D\U0001F467"}, 'social-bitcoin': {'emoji': '₿'}, 'person': {'emoji': '😀'}, 'star': {'emoji': '⭐'}, 'flag': {'emoji': '🏳️'}, 'heart':{'emoji':'❤'}, 'settings': {'emoji':'⚙️'}, 'email':{'emoji':'✉️'},'cloud': {'emoji': '☁️'}, 'alert-circled': {'emoji':'⚠️'}, 'android-cart': {'emoji': '🛒'}, 'image': {'emoji': '🖼️'}, 'card': {'emoji': '💳'}, 'earth': {'emoji': '🌐'}, 'wifi': {'emoji': '📶'}}
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
@@ -28,9 +28,9 @@ CLIPBOARD_CLEAR_TIME = 15
 CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'pinentry': False, 'defaultEditor': '', 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True, 'showIcons': False}
 DB_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
 TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
+TAG_NEW = ('',{'title': '', 'icon': 'home'})
+ENTRY_NEW = ('',{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True})
 
-tag_new = ('',{'title': '', 'icon': 'home'})
-entry_new = ('',{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True})
 tags = {'0': {'title': 'All', 'icon': 'home'}, }
 entries = {}
 db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
@@ -278,26 +278,42 @@ def edit_entry(e):
     if entry['success'] is False:
         sys.exit('Error: while editing entry')
     entry['success'] = False
-    edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data'], 'tags': {"inUse:":entry['tags'], "chooseFrom:": tags_to_string(tags, True)}}
-    edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json', editor=CONFIG['defaultEditor'])
+    edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data'], 'tags': {"inUse":entry['tags'], "chooseFrom": tags_to_string(tags, True)}}
+    edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
     if edit_json:
         try:
             edit_json = json.loads(edit_json)
         except:
             sys.exit('Error: edit gone wrong')
-        if edit_json['item/url*'] is None or edit_json['item/url*'] == '':
+        if 'title' not in edit_json or 'item/url*' not in edit_json or 'username' not in edit_json or 'password' not in edit_json or 'secret' not in edit_json or 'tags' not in edit_json or 'inUse' not in edit_json['tags']:
+            sys.exit('Error: edit gone wrong')
+        if edit_json['item/url*'] == '':
             sys.exit('item/url* field is mandatory')
-        entry['note'] = edit_json['item/url*'];entry['title'] = edit_json['title'];entry['username'] = edit_json['username'];entry['password']['data'] = edit_json['password'];entry['safe_note']['data'] = edit_json['secret']
+        entry['note'] = edit_json['item/url*']; entry['title'] = edit_json['title']; entry['username'] = edit_json['username']; entry['password']['data'] = edit_json['password']; entry['safe_note']['data'] = edit_json['secret']
+        for i in edit_json['tags']['inUse']:
+            if str(i) not in tags:
+                sys.exit('Error: Tag not exist: ' + str(i))
+        if 0 in edit_json['tags']['inUse']:
+            edit_json['tags']['inUse'].remove(0)
+        entry['tags'] = edit_json['tags']['inUse']
         entry['success'] = True
         return lock_entry(e)
     sys.exit('Aborted!')
 
 def edit_tag(t):
     tag_id = t[0]; tag = t[1]
-    edit_json = {"title": tag['title'], "icon":tag['icon'], "chooseIconFrom:":icons_to_string()}
-    edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json', editor=CONFIG['defaultEditor'])
+    edit_json = {'title': tag['title'], 'icon': {"inUse":tag['icon'], 'chooseFrom:':icons_to_string()}}
+    edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
     if edit_json:
-        tag['title'] = edit_json['title']; tag['icon'] = edit_json['icon']
+        try:
+            edit_json = json.loads(edit_json)
+        except:
+            sys.exit('Error: edit gone wrong')
+        if 'title' not in edit_json or edit_json['title'] == '':
+            sys.exit('Aborted: title field is mandatory')
+        if 'icon' not in edit_json or 'inUse' not in edit_json['icon'] or edit_json['icon']['inUse'] not in ICONS:
+            sys.exit('Aborted: icon not exists: ' + edit_json['icon']['inUse'])
+        tag['title'] = edit_json['title']; tag['icon'] = edit_json['icon']['inUse'] 
         return t
     sys.exit('Aborted!')
 
@@ -352,7 +368,7 @@ CLI Methods
 
 @click.group()
 @click.version_option()
-@click.option('--debug', is_flag=True, help='Output debug info')
+@click.option('--debug', is_flag=True, help='Show debug info')
 def cli(debug):
     '''
     ~+~#~+~~+~#~+~~+~#~+~~+~#~+~~+~#~+~\n
@@ -386,10 +402,10 @@ def init(path, cloud, pinentry, no_disk):
         CONFIG['path'] = GOOGLE_DRIVE_PATH
     elif cloud == 'dropbox':
         CONFIG['path'] = DROPBOX_PATH
-    if not os.path.exists(path):
-        os.makedirs(path)
-    if len(os.listdir(path)) != 0:
-        sys.exit(path + ' is not empty, not initialized')
+    if not os.path.exists(CONFIG['path']):
+        os.makedirs(CONFIG['path'])
+    if len(os.listdir(CONFIG['path'])) != 0:
+        sys.exit(CONFIG['path'] + ' is not empty, not initialized')
     if cloud == 'git':
         CONFIG['useGit'] = True
         subprocess.call('git init', cwd=CONFIG['path'], shell=True)
@@ -404,8 +420,8 @@ def init(path, cloud, pinentry, no_disk):
     load_config()
     save_storage()
     if cloud == 'git':
-        subprocess.call('git add *.pswd', cwd=CONFIG['path'], shell=True)    
-    click.echo('password store initialized in ' + path)
+        subprocess.call('git add *.pswd', cwd=CONFIG['path'], shell=True)
+    click.echo('password store initialized in ' + CONFIG['path'])
     sys.exit(0)
 
 @cli.command()
@@ -579,11 +595,11 @@ def insert(tag):
     '''Insert entry or tag'''
     unlock_storage()
     if tag:
-        t = edit_tag(tag_new)
+        t = edit_tag(TAG_NEW)
         insert_tag(t)
         save_storage()
     else:
-        e = edit_entry(entry_new)
+        e = edit_entry(ENTRY_NEW)
         insert_entry(e)
         save_storage()
     sys.exit(0)
@@ -622,7 +638,7 @@ def config(edit, reset, setting_name, setting_value): # TODO parse settings
     '''Configuration settings'''
     global CONFIG
     if edit:
-        click.edit(filename=CONFIG_FILE, require_save=True, editor=CONFIG['defaultEditor'])
+        click.edit(filename=CONFIG_FILE, require_save=True)
     elif reset:
         if os.path.isfile(CONFIG_FILE):
             os.remove(CONFIG_FILE)
