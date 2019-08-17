@@ -17,7 +17,7 @@ except:
 from src import trezor
 from src import crypto
 
-ICONS = {'home': {'emoji': u'\uE036'}, 'person-stalker': {'emoji': u"\U0001F469\u200D\U0001F467"}, 'social-bitcoin': {'emoji': '₿'}, 'person': {'emoji': u'\U0001F642'}, 'star': {'emoji': u'\u2B50'}, 'flag': {'emoji': u'\U0001F3F3'}, 'heart':{'emoji': u'\u2764'}, 'settings': {'emoji': u'\u2699'}, 'email':{'emoji': u'\u2709'},'cloud': {'emoji': u'\u2601'}, 'alert-circled': {'emoji': u'\u26a0'}, 'android-cart': {'emoji': u'\U0001f6d2'}, 'image': {'emoji': u'\U0001F5BC'}, 'card': {'emoji': u'\U0001f4b3'}, 'earth': {'emoji': u'\U0001F310'}, 'wifi': {'emoji': u'\U0001f4f6'}}
+ICONS = {'home': {'emoji': u'\U0001f3e0'}, 'person-stalker': {'emoji': u'\U0001F469\u200D\U0001F467'}, 'social-bitcoin': {'emoji': '₿'}, 'person': {'emoji': u'\U0001F642'}, 'star': {'emoji': u'\u2B50'}, 'flag': {'emoji': u'\U0001F3F3'}, 'heart':{'emoji': u'\u2764'}, 'settings': {'emoji': u'\u2699'}, 'email':{'emoji': u'\u2709'},'cloud': {'emoji': u'\u2601'}, 'alert-circled': {'emoji': u'\u26a0'}, 'android-cart': {'emoji': u'\U0001f6d2'}, 'image': {'emoji': u'\U0001F5BC'}, 'card': {'emoji': u'\U0001f4b3'}, 'earth': {'emoji': u'\U0001F310'}, 'wifi': {'emoji': u'\U0001f4f6'}}
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
 DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
@@ -36,7 +36,7 @@ TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
 TAG_NEW = ('',{'title': '', 'icon': 'home'})
 ENTRY_NEW = ('',{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True})
 
-tags = {'0': {'title': 'All', 'icon': 'home'}, }
+tags = {'0': {'title': 'All', 'icon': 'home'},}
 entries = {}
 db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
 client = None
@@ -348,7 +348,7 @@ def insert_tag(t):
             tag_id = '0'
     tags.update( {tag_id : tag} )
 
-def remove_tag(t):
+def remove_tag(t): #TODO recursive delete entries
     global db_json; global entries
     tag_id = t[0]; tag = t[1]
     if tag_id == '0':
@@ -398,7 +398,15 @@ def tab_completion_config(ctx, args, incomplete):
 CLI Methods
 '''
 
-@click.group()
+class AliasedGroup(click.Group):
+    def get_command(self, ctx, cmd_name):
+        try:
+            cmd_name = ALIASES[cmd_name].name
+        except KeyError:
+            pass
+        return super().get_command(ctx, cmd_name)
+
+@click.group(cls=AliasedGroup)
 @click.version_option()
 @click.option('--debug', is_flag=True, help='Show debug info')
 def cli(debug):
@@ -498,9 +506,9 @@ def grep(name, case_insensitive):
             click.echo(click.style(v['note'] + ':', bold=True) + click.style(v['username'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<secret>//: ', fg='blue') + v['safe_note']['data'])
     clean_exit()
 
-@cli.command()
+@cli.command(name='list')
 @click.argument('tag-name', default='', type=click.STRING, nargs=1, autocompletion=tab_completion_tags)
-def ls(tag_name):# TODO alias
+def list_command(tag_name):# TODO alias
     '''List entries by tag'''
     unlock_storage()
     if tag_name == '':
@@ -613,7 +621,7 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
 @click.option('--tag', '-t', type=click.STRING, help='remove tag', nargs=1, autocompletion=tab_completion_tags)
 @click.option('--force', '-f', is_flag=True, help='force without confirmation')
 @click.argument('entry-name', type=click.STRING, default='', nargs=1, autocompletion=tab_completion_entries)
-def rm(entry_name, tag, force):# TODO alias; make options TRU/FALSE tag and -1 all args
+def remove(entry_name, tag, force):# TODO alias; make options TRU/FALSE tag and -1 all args
     '''Remove entry or tag'''
     unlock_storage()
     global db_json
@@ -705,12 +713,12 @@ def lock():
         click.echo(click.style('nothing to delete', bold=True)) 
     clean_exit()
 
-@cli.command()
+@cli.command(name='export')
 @click.argument('tag-name', default='all', type=click.STRING, nargs=1, autocompletion=tab_completion_tags)
 @click.argument('entry-name', type=click.STRING, nargs=-1, autocompletion=tab_completion_entries)
 @click.option('-p', '--path', default=os.path.expanduser('~'), type=click.Path(), help='path for export')
 @click.option('-f', '--file-format', default='json', type=click.Choice(['json', 'csv','txt']), help='file format')
-def exportdb(tag_name, entry_name, path, file_format):# TODO CSV
+def export_command(tag_name, entry_name, path, file_format):# TODO CSV
     '''Export password store'''
     global entries
     unlock_storage()
@@ -727,9 +735,9 @@ def exportdb(tag_name, entry_name, path, file_format):# TODO CSV
                 writer.writerow({e['note'], e['title'], e['username'],e['password']['data'],e['safe_note']['data']})
     clean_exit()
 
-@cli.command()
+@cli.command(name='import')
 @click.option('-p', '--path', type=click.Path(), help='path to import file')
-def importdb(es):# TODO CSV   
+def import_command(es):# TODO CSV   
     '''Import password store'''
     unlock_storage()
     for e in es.items():
@@ -737,3 +745,15 @@ def importdb(es):# TODO CSV
         insert_entry(e)
         save_storage()
     clean_exit()
+
+ALIASES = {
+    "cp": clip,
+    "conf": config,
+    "search": find,
+    "ins": insert,
+    "ls": list_command,
+    "del": remove,
+    "delete": remove,
+    "rm": remove,
+    "cat": show,
+}

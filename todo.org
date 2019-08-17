@@ -1,5 +1,4 @@
 * Basic features
-** TODO check if Nonce changes on every edit in TPM
 ** TODO check typeof when getting edit input and config parse
 ** TODO support for case sensitive Names
 ** TODO Export
@@ -9,15 +8,19 @@
 *** TODO json
 *** TODO CSV
 ** TODO get cryptomodul correct and secure
+*** TODO check if Nonce changes on every edit in TPM
 ** DONE Print unicode symbols correct
 ** DONE device entropy
 * Optimze
+** TODO multiple entries at once on rm, show
+** TODO insert, edit with cli parameters
 ** TODO put get_client in trezor.py logic make class?
 ** TODO refactor db into seperate class, needed for testing and import
 *** TODO refactor edit into seperate method
 ** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
 ** TODO simplejson error checking
-** TODO click aliase
+** DONE click aliase
+** DONE click python keywords
 * repository
 ** TODO screenshots
 ** TODO wiki/docs
