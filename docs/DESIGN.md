@@ -4,6 +4,7 @@
 * [Introduction](#Introduction)
 * [Privacy](#Privacy)
 * [Cryptography](#Cryptography)
+* [Syncing](#Syncing)
 
 ## Introduction
 
@@ -30,7 +31,7 @@ def getEntropy(client, length):
     return entropy
 ```
 
-Storage decryption function is taking from trezorlib/python/tools/pwd_ready.py -> decryptStorage, the shown encrytion function is implemented by tpass.
+Storage decryption function is taking from `trezorlib/python/tools/pwd_ready.py -> decryptStorage`, the shown encrytion function is implemented by tpass.
 
 ```python
 def encryptStorage(db_json, store_path, encKey, iv):
@@ -43,7 +44,7 @@ def encryptStorage(db_json, store_path, encKey, iv):
         f.write(cipherText)
 ```
 
-Similar entry decryption function is taking from trezorlib/python/tools/pwd_ready.py -> decryptEntryValue, the shown encrytion function is implemented by tpass.
+Similar entry decryption function is taking from `trezorlib/python/tools/pwd_ready.py -> decryptEntryValue`, the shown encrytion function is implemented by tpass.
 
 ```python
 def encryptEntryValue(nonce, val, iv):
@@ -54,3 +55,7 @@ def encryptEntryValue(nonce, val, iv):
     cipherText = iv + encryptor.tag + cipherText
     return [x for x in cipherText]
 ```
+
+## Syncing
+
+There are three cloud options aviable and offline mode. When the password file is read on startup, by the `unlock_storage` method, than a lockfile is created `~/.tpass/tpass.lock` and is deleted on normal exit or when a exception occurs. If a second instance of tpass is trying to read the password file, it discovers the lockfile and exits. When saving changes to the password file, it is also checked by timestamp, if it changed in the meantime and only proceeds on an unchanged pwd file. 

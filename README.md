@@ -40,24 +40,24 @@ and add this to your **.zshrc**
 ## **Usage**
 ```
 Options:
---version  Show the version and exit.
 --debug    Show debug info
+--version  Show the version and exit.
 --help     Show this message and exit.
 Commands:
 clip      Decrypt and copy line of entry to clipboard
 config    Configuration settings
 edit      Edit entry or tag
-exportdb  Export data base
+export    Export data base
 find      List names of passwords and tags that match names
 generate  Generate new password
 git       Call git commands on db storage
 grep      Search for pattern in decrypted entries
-importdb  Import data base
+import    Import data base
 init      Initialize new password storage
 insert    Insert entry or tag
 lock      Remove Plain Metadata file from disk
-ls        List names of passwords from tag
-rm        Remove entry or tag. 
+list      List names of passwords from tag
+remove    Remove entry or tag. 
 show      Decrypt and print an entry
 unlock    Unlock Storage and writes plain metadata to disk
 ```

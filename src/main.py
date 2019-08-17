@@ -177,15 +177,15 @@ def get_entry(name):#TODO optimze
     if entry_id != '' and entries.get(entry_id):
         return entry_id, entries[entry_id]
     for k, v in entries.items():
-        if note.lower() == v['note'].lower():
-            if username == '' or username.lower() == v['username'].lower():
+        if note == v['note']:
+            if username == '' or username == v['username']:
                 return k, v
     handle_exception(name + ' is not in the password store')
 
 def get_tag(tag_name):#TODO optimze
     tag_name = parse_name(tag_name)[0]
     for k, v in tags.items():
-        if tag_name.lower() == v['title'].lower():
+        if tag_name == v['title']:
             return k, v
     handle_exception(tag_name + ' is not a tag in the password store')
 
@@ -220,10 +220,10 @@ def print_tags(ts, includeEntries=False):#TODO optimze
             es = get_entries_by_tag(k)
             print_entries(es, True)
 
-def tags_to_string(ts, includeIds=False):
+def tags_to_string(ts, includeIds=False, showIcons=True):
     tags_str = ''
     for k,v in ts.items():
-        if CONFIG['showIcons'] is True:
+        if CONFIG['showIcons'] is True and showIcons:
             icon = ICONS.get(v['icon'])['emoji'] + ' ' or '? '
         else:
             icon = ''
@@ -299,7 +299,7 @@ def edit_entry(e):
     if entry['success'] is False:
         handle_exception('Error while editing entry')
     entry['success'] = False
-    edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data'], 'tags': {"inUse":entry['tags'], "chooseFrom": tags_to_string(tags, True)}}
+    edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data'], 'tags': {"inUse":entry['tags'], "chooseFrom": tags_to_string(tags, True, False)}}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
     if edit_json:
         try:
@@ -378,8 +378,8 @@ def tab_completion_entries(ctx, args, incomplete):
     for k,v in tags.items():
         es = get_entries_by_tag(k)
         for kk,vv in es.items():
-            tabs.append(v['title'].lower() + '/' + vv['note'].lower() + ':' + vv['username'].lower() + '#' + kk)
-    return [k for k in tabs if incomplete.lower() in k]
+            tabs.append(v['title'] + '/' + vv['note'] + ':' + vv['username'] + '#' + kk)
+    return [k for k in tabs if incomplete.lower() in k.lower()]
 
 def tab_completion_tags(ctx, args, incomplete):
     load_config()
@@ -388,8 +388,8 @@ def tab_completion_tags(ctx, args, incomplete):
         os.remove(LOCK_FILE)
     tabs = []
     for t in tags:
-        tabs.append(tags[t]['title'].lower() + '/')
-    return [k for k in tabs if incomplete.lower() in k]
+        tabs.append(tags[t]['title'] + '/')
+    return [k for k in tabs if incomplete.lower() in k.lower()]
 
 def tab_completion_config(ctx, args, incomplete):
     load_config()
@@ -406,10 +406,11 @@ class AliasedGroup(click.Group):
             pass
         return super().get_command(ctx, cmd_name)
 
-@click.group(cls=AliasedGroup)
-@click.version_option()
+@click.group(cls=AliasedGroup, invoke_without_command=True)
+@click.pass_context
 @click.option('--debug', is_flag=True, help='Show debug info')
-def cli(debug):
+@click.version_option()
+def cli(ctx, debug):
     '''
     ~+~#~+~~+~#~+~~+~#~+~~+~#~+~~+~#~+~\n
             tpass\n
@@ -435,7 +436,8 @@ def cli(debug):
     logging.info('tpass started')
 
     load_config()
-    pass
+    if ctx.invoked_subcommand is None:
+        ctx = list_command()
 
 @cli.command()
 @click.option('-p', '--path', default=DEFAULT_PATH, type=click.Path(), help='path to database')

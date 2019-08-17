@@ -1,17 +1,19 @@
 * Basic features
-** TODO check typeof when getting edit input and config parse
-** TODO support for case sensitive Names
 ** TODO Export
 *** TODO json
 *** TODO CSV
 ** TODO Import
 *** TODO json
 *** TODO CSV
+** TODO check typeof when getting edit input and config parse
+** TODO input parsing should handle all symbols in names -> -u, -t, -i, -p, -s
 ** TODO get cryptomodul correct and secure
 *** TODO check if Nonce changes on every edit in TPM
+** DONE support for case sensitive Names
 ** DONE Print unicode symbols correct
 ** DONE device entropy
 * Optimze
+** TODO reduce complexity
 ** TODO multiple entries at once on rm, show
 ** TODO insert, edit with cli parameters
 ** TODO put get_client in trezor.py logic make class?

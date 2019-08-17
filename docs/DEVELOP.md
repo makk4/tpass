@@ -7,8 +7,9 @@ git clone https://github.com/pyenv/pyenv.git ~/.pyenv
 ```
 #### pull from git
 clone repository
-
-
+```
+git clone --recursive git@github.com:makk4/tpass.git
+```
 update
 ```
 git pull --recurse-submodules
@@ -32,7 +33,6 @@ git pull --recurse-submodules
 ```
 #### upload to pypi
 ```
-rm -r dist/
 python3 setup.py sdist bdist_wheel
 twine check dist/*
 twine upload --repository-url https://test.pypi.org/legacy/ dist/*
