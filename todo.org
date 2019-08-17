@@ -1,5 +1,6 @@
 * Basic features
-** TODO device entropy
+** TODO check if Nonce changes on every edit in TPM
+** DONE device entropy
 ** TODO check typeof when getting edit input
 ** TODO Print unicode symbols correct
 ** TODO Export
@@ -8,26 +9,29 @@
 ** TODO Import
 *** DONE json
 *** TODO CSV
-** TODO simplify trezorAPI
 ** TODO get cryptomodul correct and secure
+** TODO put get_client in trezor.py logic make class?
 * Optimze
+** TODO refactor db into seperate class, needed for testing and import
+*** TODO refactor edit into seperate method
 ** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
 ** TODO simplejson error checking
 ** TODO support for case sensitive Names
 ** TODO click aliase
 * repository
-** TODO switch to pipenv
 ** TODO screenshots
 ** TODO wiki/docs
 ** TODO subrepo trezorlib for testing
-** DONE direnv
-** DONE pyenv
 * dev workflow
 ** TODO logging and debug info
+** TODO pipenv
 ** TODO write unittests for every method
 *** TODO docker emulator
+** DONE direnv
+** DONE pyenv
 
 * Done
+** DONE check for other instances or changed pwd file -> lockfile
 ** DONE editEntry -> use tag by name or id and check if exists?
 ** DONE Edit functions mor straightforward with multiple tags
 ** DONE return values and input of getters int() str() ? --> ids

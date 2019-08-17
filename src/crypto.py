@@ -33,17 +33,12 @@ def decryptEntryValue(nonce, valArr):
     data = data + decryptor.finalize().decode()
     return json.loads(data)
 
-def encryptEntryValue(nonce, val):
-    iv = b''
-    while (len(iv) != 12):
-        iv = os.urandom(12)
-
+def encryptEntryValue(nonce, val, iv):
     cipherkey = bytes.fromhex(nonce)
     cipher = Cipher(algorithms.AES(cipherkey), modes.GCM(iv), backend=default_backend())
     encryptor = cipher.encryptor()
     cipherText = encryptor.update(val.encode("utf-8", "replace")) + encryptor.finalize()
     cipherText = iv + encryptor.tag + cipherText
-
     return [x for x in cipherText]
 
 # @author:satoshilabs
@@ -62,21 +57,18 @@ def decryptStorage(store_path, encKey):
             else:
                 break
         data = data + decryptor.finalize().decode()
-
     return json.loads(data)
 
-def encryptStorage(db_json, store_path, encKey):
+def encryptStorage(db_json, store_path, encKey, iv): #TODO put file writing in main
     cipherkey = bytes.fromhex(encKey)
-    iv = os.urandom(12)
     cipher = Cipher(algorithms.AES(cipherkey), modes.GCM(iv), backend=default_backend())
     encryptor = cipher.encryptor()
-
     cipherText = encryptor.update(json.dumps(db_json).encode("UTF-8", "replace")) + encryptor.finalize()
     cipherText = iv + encryptor.tag + cipherText
     with open(store_path, 'wb') as f:
         f.write(cipherText)
             
-def generatePassword(length):
+def generatePassword(length, entropy=None):
     chars = (string.digits + string.ascii_letters + string.punctuation)
     while True:
         password = ''.join(random.choice(chars) for x in range(length))
@@ -96,7 +88,7 @@ def generatePassphrase(length, words, seperator, entropy=None):
     else:
         return entropy
 
-def generatePin(length):
+def generatePin(length, entropy=None):
     pin = ''
     for i in range(0, int(length)):
         pin = pin + str(secrets.randbelow(10))

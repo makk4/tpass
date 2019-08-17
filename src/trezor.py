@@ -99,7 +99,8 @@ def getEncryptedNonce(client, entry):
         item = pr.netloc
 
     ENC_KEY = 'Unlock %s for user %s?' % (item, entry['username'])
-    ENC_VALUE = getEntropy(client, 32)
+    entropy = getEntropy(client, 32)
+    ENC_VALUE = hashlib.sha256(entropy).digest()
     encrypted_nonce = misc.encrypt_keyvalue(
         client,
         BIP32_PATH,
@@ -134,11 +135,11 @@ def decryptMasterKey(client):
     return key.hex()
 
 def getEntropy(client, length):
-    trezor_entropy = misc.get_entropy(client, length)
-    urandom_entropy = os.urandom(length)
-    entropy = hashlib.sha256(trezor_entropy + urandom_entropy).digest()
+    trezor_entropy = misc.get_entropy(client, length//2)
+    urandom_entropy = os.urandom(length//2)
+    entropy = trezor_entropy + urandom_entropy
     if len(entropy) != length:
-        raise ValueError(length + ' bytes entropy expected')
+        raise ValueError(str(length) + ' bytes entropy expected')
     return entropy
 
 def getTrezorKeys(client):

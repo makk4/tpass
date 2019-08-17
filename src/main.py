@@ -9,11 +9,11 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 try:
     import simplejson as json
 except:
     import json
-from datetime import datetime
 from src import trezor
 from src import crypto
 
@@ -24,12 +24,12 @@ DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
 CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
 CONFIG_FILE = os.path.join(CONFIG_PATH, 'config.json')
 LOCK_FILE = os.path.join(CONFIG_PATH, 'tpass.lock')
-LOCK_TIME = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-LOCK = {'lock_time':LOCK_TIME, 'pwd_last_change_time':''}
+UUID = uuid.uuid4().int
+LOCK = {'uuid':UUID, 'pwd_last_change_time':''} # TODO make empty file:: get timestamp of lockfile instead of uuid; write pwd_last_change_time in var instead LOCK --> spead up start
 DICEWARE_FILE = os.path.join(CONFIG_PATH, 'wordlist.txt')
 DEV_SHM = os.path.join('/', 'dev', 'shm')
 CLIPBOARD_CLEAR_TIME = 15
-CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'pinentry': False, 'defaultEditor': '', 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True, 'showIcons': False}
+CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True, 'showIcons': False}
 PWD_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
 TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
 TAG_NEW = ('',{'title': '', 'icon': 'home'})
@@ -45,8 +45,6 @@ Core Methods
 '''
 def load_config():
     global CONFIG; global TMP_FILE; global PWD_FILE
-    if os.path.isfile(LOCK_FILE):
-        sys.exit('Error: password store is locked by another instance, remove lockfile to proceed: ' + LOCK_FILE)
     if not os.path.isfile(CONFIG_FILE):
         write_config()
     with open(CONFIG_FILE) as f:
@@ -69,9 +67,12 @@ def write_config():
  
 def unlock_storage():
     global LOCK; global db_json; global entries; global tags
-    tmp_need_update = False
+    if os.path.isfile(LOCK_FILE):
+        sys.exit('Error: password store is locked by another instance, remove lockfile to proceed: ' + LOCK_FILE)
     if CONFIG['fileName'] == '' or not os.path.isfile(PWD_FILE):
         handle_exception('Password store is not initialized')
+
+    tmp_need_update = False
     if CONFIG['storeMetaDataOnDisk'] is True:
         tmp_need_update = not os.path.isfile(TMP_FILE) or (os.path.isfile(TMP_FILE) and (os.path.getmtime(TMP_FILE) < os.path.getmtime(PWD_FILE)))
     if CONFIG['storeMetaDataOnDisk'] is False or tmp_need_update:
@@ -79,12 +80,12 @@ def unlock_storage():
         try:
             keys = trezor.getTrezorKeys(client)
             encKey = keys[2]
-        except:
-            handle_exception('Error while getting keys from device')
+        except Exception as ex:
+            handle_exception('Error while getting keys from device', ex)
         try:
             db_json = crypto.decryptStorage(PWD_FILE, encKey)
-        except Exception:
-            handle_exception('Error while decrypting storage')
+        except Exception as ex:
+            handle_exception('Error while decrypting storage', ex)
         entries = db_json['entries']; tags = db_json['tags']
         if CONFIG['storeMetaDataOnDisk'] is True:
             with open(TMP_FILE, 'w') as f:
@@ -103,7 +104,7 @@ def save_storage():
         handle_exception('Error: Lockfile deleted, aborting')
     with open(LOCK_FILE) as f:
         LOCK = json.load(f)
-    if LOCK['lock_time'] != LOCK_TIME:
+    if LOCK['uuid'] != UUID:
         handle_exception('Error: Lockfile changed, aborting')
     if not os.path.isfile(PWD_FILE) or os.path.getmtime(PWD_FILE) != LOCK['pwd_last_change_time']:
         handle_exception('Error: password file changed, aborting')
@@ -111,12 +112,13 @@ def save_storage():
     try:
         keys = trezor.getTrezorKeys(client)
         encKey = keys[2]
-    except Exception:
-        handle_exception('Error while accessing trezor device')
+        iv = trezor.getEntropy(client, 12)
+    except Exception as ex:
+        handle_exception('Error while accessing trezor device', ex)
     try:
-        crypto.encryptStorage(db_json, PWD_FILE, encKey)
-    except Exception:
-        handle_exception('Error while encrypting storage')
+        crypto.encryptStorage(db_json, PWD_FILE, encKey, iv)
+    except Exception as ex:
+        handle_exception('Error while encrypting storage', ex)
     if CONFIG['storeMetaDataOnDisk'] is True:
         with open(TMP_FILE, 'w') as f:
             json.dump(db_json, f) 
@@ -135,8 +137,8 @@ def load_wordlist():
                     key, value = line.rstrip('\n').split('\t')
                     if(not key in words):
                         words[key] = value
-    except Exception:
-        handle_exception('Error: while processing wordlist.txt file')
+    except Exception as ex:
+        handle_exception('Error: while processing wordlist.txt file', ex)
     return words
 
 def clear_clipboard():
@@ -150,8 +152,8 @@ def get_client():
     if client is None:
         try:
             client = trezor.getTrezorClient()
-        except Exception:
-            handle_exception('Error while accessing trezor device')
+        except Exception as ex:
+            handle_exception('Error while accessing trezor device', ex)
 
 def parse_name(input_str):
     tag = ''; note = ''; username = ''; entry_id = ''
@@ -245,15 +247,15 @@ def unlock_entry(e):
     try:   
         get_client()
         plain_nonce = trezor.getDecryptedNonce(client, entry)
-    except Exception:
-        handle_exception('Error: while accessing trezor device')    
+    except Exception as ex:
+        handle_exception('Error: while accessing trezor device', ex)    
     try:
         entry['password']['data'] = crypto.decryptEntryValue(plain_nonce, entry['password']['data'])
         entry['safe_note']['data'] = crypto.decryptEntryValue(plain_nonce, entry['safe_note']['data'])
         entry['password']['type'] = 'String'; entry['safe_note']['type'] = 'String'
         entry['success'] = True
-    except Exception:
-        handle_exception('Error: while decrypting entry')
+    except Exception as ex:
+        handle_exception('Error: while decrypting entry', ex)
     return e
 
 def lock_entry(e):
@@ -265,15 +267,17 @@ def lock_entry(e):
         get_client()
         entry['nonce'] = trezor.getEncryptedNonce(client, entry)
         plain_nonce = trezor.getDecryptedNonce(client, entry)
-    except Exception:
-        handle_exception('Error: while accessing trezor device')
+        iv_pwd = trezor.getEntropy(client, 12)
+        iv_secret = trezor.getEntropy(client, 12)
+    except Exception as ex:
+        handle_exception('Error: while accessing trezor device', ex)
     try:
-        entry['password']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']))
-        entry['safe_note']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']))
+        entry['password']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']), iv_pwd)
+        entry['safe_note']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']), iv_secret)
         entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
         entry['success'] = True
-    except Exception:
-        handle_exception('Error: while decrypting entry')
+    except Exception as ex:
+        handle_exception('Error: while encrypting entry', ex)
     return e
 
 def insert_entry(e):
@@ -300,8 +304,8 @@ def edit_entry(e):
     if edit_json:
         try:
             edit_json = json.loads(edit_json)
-        except:
-            handle_exception('Error: edit gone wrong')
+        except Exception as ex:
+            handle_exception('Error: edit gone wrong', ex)
         if 'title' not in edit_json or 'item/url*' not in edit_json or 'username' not in edit_json or 'password' not in edit_json or 'secret' not in edit_json or 'tags' not in edit_json or 'inUse' not in edit_json['tags']:
             handle_exception('Error: edit gone wrong')
         if edit_json['item/url*'] == '':
@@ -324,8 +328,8 @@ def edit_tag(t):
     if edit_json:
         try:
             edit_json = json.loads(edit_json)
-        except:
-            handle_exception('Error: edit gone wrong')
+        except Exception as ex:
+            handle_exception('Error: edit gone wrong', ex)
         if 'title' not in edit_json or edit_json['title'] == '':
             handle_exception('Aborted: title field is mandatory')
         if 'icon' not in edit_json or 'inUse' not in edit_json['icon'] or edit_json['icon']['inUse'] not in ICONS:
@@ -354,8 +358,10 @@ def remove_tag(t):
     for e in es:
         entries[e]['tags'].remove(int(tag_id))
 
-def handle_exception(message):
+def handle_exception(message, ex=None, code=None):
     logging.error(message)
+    if ex is not None:
+        logging.debug(ex)
     clean_exit(1)
 
 def clean_exit(exit_code=0):
@@ -366,6 +372,8 @@ def clean_exit(exit_code=0):
 def tab_completion_entries(ctx, args, incomplete):
     load_config()
     unlock_storage()
+    if os.path.isfile(LOCK_FILE):
+        os.remove(LOCK_FILE)
     tabs = []
     for k,v in tags.items():
         es = get_entries_by_tag(k)
@@ -376,6 +384,8 @@ def tab_completion_entries(ctx, args, incomplete):
 def tab_completion_tags(ctx, args, incomplete):
     load_config()
     unlock_storage()
+    if os.path.isfile(LOCK_FILE):
+        os.remove(LOCK_FILE)
     tabs = []
     for t in tags:
         tabs.append(tags[t]['title'].lower() + '/')
@@ -407,6 +417,8 @@ def cli(debug):
 
     if debug is True:
         logging.basicConfig(level=logging.DEBUG, filename='tpass.log', format='%(asctime)s-%(process)d-%(levelname)s-%(message)s')
+    else:
+        logging.basicConfig(level=logging.WARNING, filename='tpass.log', format='%(asctime)s-%(process)d-%(levelname)s-%(message)s')
     logging.getLogger().addHandler(logging.StreamHandler())
     load_config()
     pass
@@ -435,8 +447,8 @@ def init(path, cloud, pinentry, no_disk):
     try:
         keys = trezor.getTrezorKeys(client)
         CONFIG['fileName'] = keys[0]
-    except:
-        handle_exception('Error while getting keys from device')
+    except Exception as ex:
+        handle_exception('Error while getting keys from device', ex)
     PWD_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
     write_config()
     load_config()
@@ -572,9 +584,9 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
         words = load_wordlist()
         pwd = crypto.generatePassphrase(length, words, seperator, entropy)
     elif type_ == 'pin':
-        pwd = crypto.generatePin(length)
+        pwd = crypto.generatePin(length, entropy)
     elif type_ == 'password':
-        pwd = crypto.generatePassword(length)
+        pwd = crypto.generatePassword(length, entropy)
     if insert:
         unlock_storage()
         e = get_entry(insert)
@@ -718,4 +730,10 @@ def importdb(es):# TODO CSV
         lock_entry(e)
         insert_entry(e)
         save_storage()
+    clean_exit()
+
+@cli.command()
+def test(): 
+    get_client()
+    trezor.getEntropy(client,12)
     clean_exit()
