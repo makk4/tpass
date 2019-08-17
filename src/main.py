@@ -17,6 +17,7 @@ except:
 from src import trezor
 from src import crypto
 
+# TODO simplify ICONS datastructure
 ICONS = {'home': {'emoji': u'\U0001f3e0'}, 'person-stalker': {'emoji': u'\U0001F469\u200D\U0001F467'}, 'social-bitcoin': {'emoji': '₿'}, 'person': {'emoji': u'\U0001F642'}, 'star': {'emoji': u'\u2B50'}, 'flag': {'emoji': u'\U0001F3F3'}, 'heart':{'emoji': u'\u2764'}, 'settings': {'emoji': u'\u2699'}, 'email':{'emoji': u'\u2709'},'cloud': {'emoji': u'\u2601'}, 'alert-circled': {'emoji': u'\u26a0'}, 'android-cart': {'emoji': u'\U0001f6d2'}, 'image': {'emoji': u'\U0001F5BC'}, 'card': {'emoji': u'\U0001f4b3'}, 'earth': {'emoji': u'\U0001F310'}, 'wifi': {'emoji': u'\U0001f4f6'}}
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
@@ -57,7 +58,7 @@ def load_config():
         TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
         if not os.path.exists(DEV_SHM):
             TMP_FILE = os.path.join(tempfile.gettempdir(), CONFIG['fileName'] + '.json')
-            logging.warning('Warning: /dev/shm not found on host, using not as secure /tmp for metadata')
+            logging.warning('/dev/shm not found on host, using not as secure /tmp for metadata')
 
 def write_config():
     if not os.path.exists(CONFIG_PATH):    
@@ -155,35 +156,17 @@ def get_client():
         except Exception as ex:
             handle_exception('Error while accessing trezor device', ex)
 
-def parse_name(input_str):
-    tag = ''; note = ''; username = ''; entry_id = ''
-    if input_str.startswith('#') or '#' in input_str:
-        entry_id = input_str.split('#')[1]
-    elif not '/' in input_str:
-        tag = note = input_str
-    else:
-        if not ':' in input_str:
-            tag = input_str.split('/')[0]
-            note = input_str.split('/')[1]
-        else:
-            tag = input_str.split('/')[0]
-            username = input_str.split(':')[1]
-            note = input_str.split('/')[1].split(':')[0]
-    return tag, note, username, entry_id
-
-def get_entry(name):#TODO optimze
-    names = parse_name(name)
-    note = names[1]; username = names[2]; entry_id = names[3]
+def get_entry(names):#TODO optimze; remove exception
+    tag = names[0]; note = names[1]; username = names[2]; entry_id = names[3]
     if entry_id != '' and entries.get(entry_id):
         return entry_id, entries[entry_id]
     for k, v in entries.items():
         if note == v['note']:
             if username == '' or username == v['username']:
                 return k, v
-    handle_exception(name + ' is not in the password store')
+    handle_exception(', '.join(names) + ' is not in the password store')
 
-def get_tag(tag_name):#TODO optimze
-    tag_name = parse_name(tag_name)[0]
+def get_tag(tag_name):#TODO optimze; remove exception
     for k, v in tags.items():
         if tag_name == v['title']:
             return k, v
@@ -232,12 +215,6 @@ def tags_to_string(ts, includeIds=False, showIcons=True):
         else:
             tags_str = tags_str + icon + v['title'] + ' '
     return tags_str.strip()
-
-def icons_to_string():
-    icon_str = ''
-    for k,v in ICONS.items():
-        icon_str = icon_str + k + ':' + v['emoji'] + ', '
-    return icon_str
 
 def unlock_entry(e):
     entry_id = e[0]; entry = e[1]
@@ -292,7 +269,7 @@ def insert_entry(e):
             entry_id = '0'
     entries.update( {entry_id : entry} )
 
-def edit_entry(e):
+def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
     entry = e[1]
     if entry['export'] is False:
         e = unlock_entry(e)
@@ -323,7 +300,7 @@ def edit_entry(e):
 
 def edit_tag(t):
     tag_id = t[0]; tag = t[1]
-    edit_json = {'title': tag['title'], 'icon': {"inUse":tag['icon'], 'chooseFrom:':icons_to_string()}}
+    edit_json = {'title': tag['title'], 'icon': {"inUse":tag['icon'], 'chooseFrom:':', '.join(ICONS)}}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
     if edit_json:
         try:
@@ -369,6 +346,10 @@ def clean_exit(exit_code=0):
         os.remove(LOCK_FILE)
     sys.exit(exit_code)
 
+'''
+CLI Methods
+'''
+
 def tab_completion_entries(ctx, args, incomplete):
     load_config()
     unlock_storage()
@@ -394,9 +375,28 @@ def tab_completion_tags(ctx, args, incomplete):
 def tab_completion_config(ctx, args, incomplete):
     load_config()
     return [k for k in CONFIG if incomplete.lower() in k]
-'''
-CLI Methods
-'''
+
+class EntryName(click.ParamType):
+    def convert(self, value, param, ctx):
+        tag = ''; note = ''; username = ''; entry_id = ''
+        if value.startswith('#') or '#' in value:
+            entry_id = value.split('#')[1]
+        elif not '/' in value:
+            tag = note = value
+        else:
+            if not ':' in value:
+                tag = value.split('/')[0]
+                note = value.split('/')[1]
+            else:
+                tag = value.split('/')[0]
+                username = value.split(':')[1]
+                note = value.split('/')[1].split(':')[0]
+        return (tag, note, username, entry_id)
+
+class TagName(click.ParamType): # TODO check for String
+    def convert(self, value, param, ctx):
+        tag = value.split('/')[0]
+        return tag
 
 class AliasedGroup(click.Group):
     def get_command(self, ctx, cmd_name):
@@ -407,9 +407,9 @@ class AliasedGroup(click.Group):
         return super().get_command(ctx, cmd_name)
 
 @click.group(cls=AliasedGroup, invoke_without_command=True)
-@click.pass_context
 @click.option('--debug', is_flag=True, help='Show debug info')
 @click.version_option()
+@click.pass_context
 def cli(ctx, debug):
     '''
     ~+~#~+~~+~#~+~~+~#~+~~+~#~+~~+~#~+~\n
@@ -476,7 +476,7 @@ def init(path, cloud, pinentry, no_disk):
 
 @cli.command()
 @click.argument('name', type=click.STRING, nargs=1)
-def find(name):# TODO alias
+def find(name):
     '''List entries and tags that match names'''
     unlock_storage()
     es = {}; ts = {}
@@ -509,8 +509,8 @@ def grep(name, case_insensitive):
     clean_exit()
 
 @cli.command(name='list')
-@click.argument('tag-name', default='', type=click.STRING, nargs=1, autocompletion=tab_completion_tags)
-def list_command(tag_name):# TODO alias
+@click.argument('tag-name', default='', type=TagName(), nargs=1, autocompletion=tab_completion_tags)
+def list_command(tag_name):
     '''List entries by tag'''
     unlock_storage()
     if tag_name == '':
@@ -521,10 +521,10 @@ def list_command(tag_name):# TODO alias
     clean_exit()
     
 @cli.command()
-@click.argument('entry-names', type=click.STRING, nargs=-1, autocompletion=tab_completion_entries)
+@click.argument('entry-names', type=EntryName(), nargs=-1, autocompletion=tab_completion_entries)
 @click.option('-s', '--secrets', is_flag=True, help='show password and secret notes')
 @click.option('-j', '--json', is_flag=True, help='json format')
-def show(entry_names, secrets, json): # TODO alias
+def show(entry_names, secrets, json):
     '''Show entries'''
     unlock_storage()
     for name in entry_names:
@@ -558,8 +558,8 @@ def show(entry_names, secrets, json): # TODO alias
 @click.option('-u', '--user', is_flag=True, help='copy user')
 @click.option('-i', '--url', is_flag=True, help='copy item/url*')
 @click.option('-s', '--secret', is_flag=True, help='copy secret')
-@click.argument('entry-name', type=click.STRING, nargs=1, autocompletion=tab_completion_entries)
-def clip(user, url, secret, entry_name):# TODO alias
+@click.argument('entry-name', type=EntryName(), nargs=1, autocompletion=tab_completion_entries)
+def clip(user, url, secret, entry_name):
     '''Decrypt and copy line of entry to clipboard'''
     unlock_storage()
     e = get_entry(entry_name)
@@ -571,15 +571,15 @@ def clip(user, url, secret, entry_name):# TODO alias
     else:
         e = unlock_entry(e)
         if secret:
-            pyperclip.copy(entry['password']['data'])
-        else:
             pyperclip.copy(entry['safe_note']['data'])
+        else:
+            pyperclip.copy(entry['password']['data'])
         clear_clipboard()
     clean_exit()     
     
 @cli.command()# TODO callback eager options
 @click.argument('length', default=15, type=int)
-@click.option('-i', '--insert', default=None, type=click.STRING, nargs=1, autocompletion=tab_completion_entries)
+@click.option('-i', '--insert', default=None, type=EntryName(), nargs=1, autocompletion=tab_completion_entries)
 @click.option('-c', '--clip', is_flag=True, help='copy to clipboard')
 @click.option('-t', '--type','type_', default='password', type=click.Choice(['password', 'wordlist', 'pin']), help='type of password')
 @click.option('-s', '--seperator', default=' ', type=click.STRING, help='seperator for passphrase')
@@ -620,10 +620,10 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
     clean_exit()
 
 @cli.command()
-@click.option('--tag', '-t', type=click.STRING, help='remove tag', nargs=1, autocompletion=tab_completion_tags)
+@click.option('--tag', '-t', type=TagName(), help='remove tag', nargs=1, autocompletion=tab_completion_tags)
 @click.option('--force', '-f', is_flag=True, help='force without confirmation')
-@click.argument('entry-name', type=click.STRING, default='', nargs=1, autocompletion=tab_completion_entries)
-def remove(entry_name, tag, force):# TODO alias; make options TRU/FALSE tag and -1 all args
+@click.argument('entry-name', type=EntryName(), default='', nargs=1, autocompletion=tab_completion_entries)
+def remove(entry_name, tag, force):# TODO make options TRU/FALSE tag and -1 all args
     '''Remove entry or tag'''
     unlock_storage()
     global db_json
@@ -655,8 +655,8 @@ def insert(tag):
     clean_exit()
 
 @cli.command()
-@click.argument('entry-name', type=click.STRING, default='', nargs=1, autocompletion=tab_completion_entries)
-@click.option('--tag', '-t', type=click.STRING, default='', nargs=1, help='edit tag', autocompletion=tab_completion_tags)
+@click.argument('entry-name', type=EntryName(), default='', nargs=1, autocompletion=tab_completion_entries)
+@click.option('--tag', '-t', type=TagName(), default='', nargs=1, help='edit tag', autocompletion=tab_completion_tags)
 def edit(entry_name, tag):#TODO option --entry/--tag with default
     '''Edit entry or tag'''
     unlock_storage()
@@ -739,7 +739,7 @@ def export_command(tag_name, entry_name, path, file_format):# TODO CSV
 
 @cli.command(name='import')
 @click.option('-p', '--path', type=click.Path(), help='path to import file')
-def import_command(es):# TODO CSV   
+def import_command(path):# TODO CSV   
     '''Import password store'''
     unlock_storage()
     for e in es.items():
@@ -749,13 +749,14 @@ def import_command(es):# TODO CSV
     clean_exit()
 
 ALIASES = {
-    "cp": clip,
-    "conf": config,
-    "search": find,
-    "ins": insert,
-    "ls": list_command,
-    "del": remove,
-    "delete": remove,
-    "rm": remove,
-    "cat": show,
+    'cp': clip,
+    'copy': clip,
+    'conf': config,
+    'search': find,
+    'ins': insert,
+    'ls': list_command,
+    'del': remove,
+    'delete': remove,
+    'rm': remove,
+    'cat': show,
 }

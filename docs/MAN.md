@@ -45,7 +45,7 @@
     "title": "bitcoin",
     "icon": {
          "inUse": "social-bitcoin",
-        "chooseFrom:": "home:\ud83c\udfe0, person-stalker:\ud83d\udc69\u200d\ud83d\udc67, social-bitcoin:\u20bf, person:\ud83d\ude42, star:\u2b50, flag:\ud83c\udff3, heart:\u2    764, settings:\u2699, email:\u2709, cloud:\u2601, alert-circled:\u26a0, android-cart:\ud83d\uded2, image:\ud83d\uddbc, card:\ud83d\udcb3, earth:\ud83c\udf10, wifi:\ud83d\udcf6    , "
+        "chooseFrom:": "home, person-stalker, social-bitcoin, person, star, flag, heart, settings, email, cloud, alert-circled, android-cart, image, card, earth, wifi"
     }
 }
 ```
