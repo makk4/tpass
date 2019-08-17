@@ -17,12 +17,13 @@ except:
 from src import trezor
 from src import crypto
 
-ICONS = {'home': {'emoji': u'\uE036'}, 'person-stalker': {'emoji': u"\U0001F469\u200D\U0001F467"}, 'social-bitcoin': {'emoji': '₿'}, 'person': {'emoji': '😀'}, 'star': {'emoji': '⭐'}, 'flag': {'emoji': '🏳️'}, 'heart':{'emoji':'❤'}, 'settings': {'emoji':'⚙️'}, 'email':{'emoji':'✉️'},'cloud': {'emoji': '☁️'}, 'alert-circled': {'emoji':'⚠️'}, 'android-cart': {'emoji': '🛒'}, 'image': {'emoji': '🖼️'}, 'card': {'emoji': '💳'}, 'earth': {'emoji': '🌐'}, 'wifi': {'emoji': '📶'}}
+ICONS = {'home': {'emoji': u'\uE036'}, 'person-stalker': {'emoji': u"\U0001F469\u200D\U0001F467"}, 'social-bitcoin': {'emoji': '₿'}, 'person': {'emoji': u'\U0001F642'}, 'star': {'emoji': u'\u2B50'}, 'flag': {'emoji': u'\U0001F3F3'}, 'heart':{'emoji': u'\u2764'}, 'settings': {'emoji': u'\u2699'}, 'email':{'emoji': u'\u2709'},'cloud': {'emoji': u'\u2601'}, 'alert-circled': {'emoji': u'\u26a0'}, 'android-cart': {'emoji': u'\U0001f6d2'}, 'image': {'emoji': u'\U0001F5BC'}, 'card': {'emoji': u'\U0001f4b3'}, 'earth': {'emoji': u'\U0001F310'}, 'wifi': {'emoji': u'\U0001f4f6'}}
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
 DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
 CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
 CONFIG_FILE = os.path.join(CONFIG_PATH, 'config.json')
+LOG_FILE = os.path.join(CONFIG_PATH, 'tpass.log')
 LOCK_FILE = os.path.join(CONFIG_PATH, 'tpass.lock')
 UUID = uuid.uuid4().int
 LOCK = {'uuid':UUID, 'pwd_last_change_time':''} # TODO make empty file:: get timestamp of lockfile instead of uuid; write pwd_last_change_time in var instead LOCK --> spead up start
@@ -50,14 +51,13 @@ def load_config():
     with open(CONFIG_FILE) as f:
         CONFIG = json.load(f)
     if 'fileName' not in CONFIG or 'path' not in CONFIG or 'storeMetaDataOnDisk' not in CONFIG:
-        handle_exception('Error: config parse error: ' + CONFIG_PATH)
+        handle_exception('Config parse error: ' + CONFIG_PATH)
     PWD_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
     if CONFIG['storeMetaDataOnDisk'] is True:
         TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
         if not os.path.exists(DEV_SHM):
             TMP_FILE = os.path.join(tempfile.gettempdir(), CONFIG['fileName'] + '.json')
             logging.warning('Warning: /dev/shm not found on host, using not as secure /tmp for metadata')
-            #click.echo('Warning: /dev/shm not found on host, using not as secure /tmp for metadata')
 
 def write_config():
     if not os.path.exists(CONFIG_PATH):    
@@ -101,13 +101,13 @@ def unlock_storage():
 def save_storage():
     global CONFIG
     if not os.path.isfile(LOCK_FILE):
-        handle_exception('Error: Lockfile deleted, aborting')
+        handle_exception('Lockfile deleted, aborting')
     with open(LOCK_FILE) as f:
         LOCK = json.load(f)
     if LOCK['uuid'] != UUID:
-        handle_exception('Error: Lockfile changed, aborting')
+        handle_exception('Lockfile changed, aborting')
     if not os.path.isfile(PWD_FILE) or os.path.getmtime(PWD_FILE) != LOCK['pwd_last_change_time']:
-        handle_exception('Error: password file changed, aborting')
+        handle_exception('Password file changed, aborting')
     get_client()
     try:
         keys = trezor.getTrezorKeys(client)
@@ -138,7 +138,7 @@ def load_wordlist():
                     if(not key in words):
                         words[key] = value
     except Exception as ex:
-        handle_exception('Error: while processing wordlist.txt file', ex)
+        handle_exception('Error while processing wordlist.txt file', ex)
     return words
 
 def clear_clipboard():
@@ -180,14 +180,14 @@ def get_entry(name):#TODO optimze
         if note.lower() == v['note'].lower():
             if username == '' or username.lower() == v['username'].lower():
                 return k, v
-    handle_exception('Error: ' + name + ' is not in the password store')
+    handle_exception(name + ' is not in the password store')
 
 def get_tag(tag_name):#TODO optimze
     tag_name = parse_name(tag_name)[0]
     for k, v in tags.items():
         if tag_name.lower() == v['title'].lower():
             return k, v
-    handle_exception('Error: ' + tag_name + ' is not a tag in the password store')
+    handle_exception(tag_name + ' is not a tag in the password store')
 
 def get_entries_by_tag(tag_id):#TODO optimze
     es = {}
@@ -198,7 +198,7 @@ def get_entries_by_tag(tag_id):#TODO optimze
 
 def print_entries(es, includeTree=False):#TODO optimze
     if includeTree:
-        start = '  ├── ';start_end = '  └── '
+        start = '  ' + u'\u251C' + u'\u2500' + u'\u2500' + ' '; start_end = '  ' + u'\u2514' + u'\u2500' + u'\u2500' + ' '
     else:
         start = ''; start_end = ''
     i = 0
@@ -215,7 +215,7 @@ def print_tags(ts, includeEntries=False):#TODO optimze
             icon = ICONS.get(v['icon'])['emoji'] + ' ' or '? '
         else:
             icon = ''
-        click.echo(icon + click.style(v['title'] + '/',bold=True , fg='blue'))
+        click.echo(icon + click.style(v['title'], bold=True , fg='blue'))
         if includeEntries:
             es = get_entries_by_tag(k)
             print_entries(es, True)
@@ -242,26 +242,26 @@ def icons_to_string():
 def unlock_entry(e):
     entry_id = e[0]; entry = e[1]
     if entry['success'] is False or entry['export'] is True:
-        handle_exception('Error: while unlocking entry')
+        handle_exception('Error while unlocking entry')
     entry['success'] = False; entry['export'] = True
     try:   
         get_client()
         plain_nonce = trezor.getDecryptedNonce(client, entry)
     except Exception as ex:
-        handle_exception('Error: while accessing trezor device', ex)    
+        handle_exception('Error while accessing trezor device', ex)    
     try:
         entry['password']['data'] = crypto.decryptEntryValue(plain_nonce, entry['password']['data'])
         entry['safe_note']['data'] = crypto.decryptEntryValue(plain_nonce, entry['safe_note']['data'])
         entry['password']['type'] = 'String'; entry['safe_note']['type'] = 'String'
         entry['success'] = True
     except Exception as ex:
-        handle_exception('Error: while decrypting entry', ex)
+        handle_exception('Error while decrypting entry', ex)
     return e
 
 def lock_entry(e):
     entry_id = e[0]; entry = e[1]
     if entry['success'] is False or entry['export'] is False:
-        handle_exception('Error: while locking entry')
+        handle_exception('Error while locking entry')
     entry['success'] = False; entry['export'] = False
     try:
         get_client()
@@ -270,21 +270,21 @@ def lock_entry(e):
         iv_pwd = trezor.getEntropy(client, 12)
         iv_secret = trezor.getEntropy(client, 12)
     except Exception as ex:
-        handle_exception('Error: while accessing trezor device', ex)
+        handle_exception('Error while accessing trezor device', ex)
     try:
         entry['password']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']), iv_pwd)
         entry['safe_note']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']), iv_secret)
         entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
         entry['success'] = True
     except Exception as ex:
-        handle_exception('Error: while encrypting entry', ex)
+        handle_exception('Error while encrypting entry', ex)
     return e
 
 def insert_entry(e):
     global entries
     entry_id = e[0]; entry = e[1]
     if entry['success'] is False or entry['export'] is True:
-        handle_exception('Error: while inserting entry')
+        handle_exception('Error while inserting entry')
     if entry_id == '':
         for k in entries.keys():
             entry_id = str(int(k) + 1)
@@ -297,7 +297,7 @@ def edit_entry(e):
     if entry['export'] is False:
         e = unlock_entry(e)
     if entry['success'] is False:
-        handle_exception('Error: while editing entry')
+        handle_exception('Error while editing entry')
     entry['success'] = False
     edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data'], 'tags': {"inUse":entry['tags'], "chooseFrom": tags_to_string(tags, True)}}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
@@ -305,15 +305,15 @@ def edit_entry(e):
         try:
             edit_json = json.loads(edit_json)
         except Exception as ex:
-            handle_exception('Error: edit gone wrong', ex)
+            handle_exception('Edit gone wrong', ex)
         if 'title' not in edit_json or 'item/url*' not in edit_json or 'username' not in edit_json or 'password' not in edit_json or 'secret' not in edit_json or 'tags' not in edit_json or 'inUse' not in edit_json['tags']:
-            handle_exception('Error: edit gone wrong')
+            handle_exception('Edit gone wrong')
         if edit_json['item/url*'] == '':
             handle_exception('item/url* field is mandatory')
         entry['note'] = edit_json['item/url*']; entry['title'] = edit_json['title']; entry['username'] = edit_json['username']; entry['password']['data'] = edit_json['password']; entry['safe_note']['data'] = edit_json['secret']
         for i in edit_json['tags']['inUse']:
             if str(i) not in tags:
-                handle_exception('Error: Tag not exist: ' + str(i))
+                handle_exception('Tag not exist: ' + str(i))
         if 0 in edit_json['tags']['inUse']:
             edit_json['tags']['inUse'].remove(0)
         entry['tags'] = edit_json['tags']['inUse']
@@ -329,11 +329,11 @@ def edit_tag(t):
         try:
             edit_json = json.loads(edit_json)
         except Exception as ex:
-            handle_exception('Error: edit gone wrong', ex)
+            handle_exception('Edit gone wrong', ex)
         if 'title' not in edit_json or edit_json['title'] == '':
-            handle_exception('Aborted: title field is mandatory')
+            handle_exception('Title field is mandatory')
         if 'icon' not in edit_json or 'inUse' not in edit_json['icon'] or edit_json['icon']['inUse'] not in ICONS:
-            handle_exception('Aborted: icon not exists: ' + edit_json['icon']['inUse'])
+            handle_exception('Icon not exists: ' + edit_json['icon']['inUse'])
         tag['title'] = edit_json['title']; tag['icon'] = edit_json['icon']['inUse'] 
         return t
     handle_exception('Aborted!')
@@ -352,7 +352,7 @@ def remove_tag(t):
     global db_json; global entries
     tag_id = t[0]; tag = t[1]
     if tag_id == '0':
-        handle_exception('Error: cannot remove <all> tag')
+        handle_exception('Cannot remove <all> tag')
     del db_json['tags'][tag_id]
     es = get_entries_by_tag(tag_id)
     for e in es:
@@ -365,7 +365,7 @@ def handle_exception(message, ex=None, code=None):
     clean_exit(1)
 
 def clean_exit(exit_code=0):
-    if os.path.isfile(LOCK_FILE):
+    if os.path.isfile(LOCK_FILE):#TODO only delete own lockfile
         os.remove(LOCK_FILE)
     sys.exit(exit_code)
 
@@ -414,12 +414,18 @@ def cli(debug):
 
     https://github.com/makk4/tpass
     '''
-
-    if debug is True:
-        logging.basicConfig(level=logging.DEBUG, filename='tpass.log', format='%(asctime)s-%(process)d-%(levelname)s-%(message)s')
+    
+    logging.basicConfig(level=logging.DEBUG, filename=LOG_FILE, filemode='w', format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M')
+    console = logging.StreamHandler()
+    if debug:
+        console.setLevel(logging.DEBUG)
     else:
-        logging.basicConfig(level=logging.WARNING, filename='tpass.log', format='%(asctime)s-%(process)d-%(levelname)s-%(message)s')
-    logging.getLogger().addHandler(logging.StreamHandler())
+        console.setLevel(logging.WARNING)
+    formatter = logging.Formatter('%(levelname)s: %(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
+    logging.info('tpass started')
+
     load_config()
     pass
 
@@ -466,10 +472,10 @@ def find(name):# TODO alias
     es = {}; ts = {}
     for k,v in entries.items():
         if name.lower() in v['note'].lower() or name.lower() in v['title'].lower() or name.lower() in v['username'].lower():
-            es.update( {k : v} ) 
+            es.update({k : v})
     for k,v in tags.items():
         if name.lower() in v['title'].lower():
-            ts.update( {k : v} ) 
+            ts.update({k : v}) 
     print_entries(es)
     print_tags(ts)
     clean_exit()
@@ -574,7 +580,7 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
     global db_json
     if (length < 6 and type_ is 'password') or (length < 3 and type_ is 'wordlist') or (length < 4 and type_ is 'pin'):
         if not click.confirm('Warning: ' + length + ' is too short for password with type ' + type_ + '. Continue?'):
-            handle_exception(-1)
+            handle_exception('Aborted')
     if entropy:
         get_client()
         entropy = trezor.getEntropy(client, length)
@@ -730,10 +736,4 @@ def importdb(es):# TODO CSV
         lock_entry(e)
         insert_entry(e)
         save_storage()
-    clean_exit()
-
-@cli.command()
-def test(): 
-    get_client()
-    trezor.getEntropy(client,12)
     clean_exit()
