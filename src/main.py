@@ -17,8 +17,7 @@ except:
 from src import trezor
 from src import crypto
 
-# TODO simplify ICONS datastructure
-ICONS = {'home': {'emoji': u'\U0001f3e0'}, 'person-stalker': {'emoji': u'\U0001F469\u200D\U0001F467'}, 'social-bitcoin': {'emoji': '₿'}, 'person': {'emoji': u'\U0001F642'}, 'star': {'emoji': u'\u2B50'}, 'flag': {'emoji': u'\U0001F3F3'}, 'heart':{'emoji': u'\u2764'}, 'settings': {'emoji': u'\u2699'}, 'email':{'emoji': u'\u2709'},'cloud': {'emoji': u'\u2601'}, 'alert-circled': {'emoji': u'\u26a0'}, 'android-cart': {'emoji': u'\U0001f6d2'}, 'image': {'emoji': u'\U0001F5BC'}, 'card': {'emoji': u'\U0001f4b3'}, 'earth': {'emoji': u'\U0001F310'}, 'wifi': {'emoji': u'\U0001f4f6'}}
+ICONS = {'home':u'\U0001f3e0', 'person-stalker':u'\U0001F469\u200D\U0001F467', 'social-bitcoin':'₿', 'person':u'\U0001F642', 'star':u'\u2B50', 'flag':u'\U0001F3F3', 'heart':u'\u2764', 'settings':u'\u2699', 'email':u'\u2709', 'cloud':u'\u2601', 'alert-circled':u'\u26a0', 'android-cart':u'\U0001f6d2', 'image':u'\U0001F5BC', 'card':u'\U0001f4b3', 'earth':u'\U0001F310', 'wifi':u'\U0001f4f6'}
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
 DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
@@ -156,7 +155,7 @@ def get_client():
         except Exception as ex:
             handle_exception('Error while accessing trezor device', ex)
 
-def get_entry(names):#TODO optimze; remove exception
+def get_entry(names):#TODO optimze; remove exception; compare tags given
     tag = names[0]; note = names[1]; username = names[2]; entry_id = names[3]
     if entry_id != '' and entries.get(entry_id):
         return entry_id, entries[entry_id]
@@ -195,7 +194,7 @@ def print_entries(es, includeTree=False):#TODO optimze
 def print_tags(ts, includeEntries=False):#TODO optimze
     for k,v in ts.items():
         if CONFIG['showIcons'] is True:
-            icon = ICONS.get(v['icon'])['emoji'] + ' ' or '? '
+            icon = ICONS.get(v['icon']) + ' ' or '? '
         else:
             icon = ''
         click.echo(icon + click.style(v['title'], bold=True , fg='blue'))
@@ -207,7 +206,7 @@ def tags_to_string(ts, includeIds=False, showIcons=True):
     tags_str = ''
     for k,v in ts.items():
         if CONFIG['showIcons'] is True and showIcons:
-            icon = ICONS.get(v['icon'])['emoji'] + ' ' or '? '
+            icon = ICONS.get(v['icon']) + ' ' or '? '
         else:
             icon = ''
         if includeIds:
@@ -285,6 +284,8 @@ def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
             handle_exception('Edit gone wrong', ex)
         if 'title' not in edit_json or 'item/url*' not in edit_json or 'username' not in edit_json or 'password' not in edit_json or 'secret' not in edit_json or 'tags' not in edit_json or 'inUse' not in edit_json['tags']:
             handle_exception('Edit gone wrong')
+        if not isinstance(edit_json['item/url*'],str) or not isinstance(edit_json['title'],str) or not isinstance(edit_json['username'],str) or not isinstance(edit_json['password'],str) or not isinstance(edit_json['secret'],str):
+            handle_exception('Edit gone wrong')
         if edit_json['item/url*'] == '':
             handle_exception('item/url* field is mandatory')
         entry['note'] = edit_json['item/url*']; entry['title'] = edit_json['title']; entry['username'] = edit_json['username']; entry['password']['data'] = edit_json['password']; entry['safe_note']['data'] = edit_json['secret']
@@ -307,9 +308,9 @@ def edit_tag(t):
             edit_json = json.loads(edit_json)
         except Exception as ex:
             handle_exception('Edit gone wrong', ex)
-        if 'title' not in edit_json or edit_json['title'] == '':
+        if 'title' not in edit_json or edit_json['title'] == '' or not isinstance(edit_json['title'],str):
             handle_exception('Title field is mandatory')
-        if 'icon' not in edit_json or 'inUse' not in edit_json['icon'] or edit_json['icon']['inUse'] not in ICONS:
+        if 'icon' not in edit_json or 'inUse' not in edit_json['icon'] or edit_json['icon']['inUse'] not in ICONS or not isinstance(edit_json['icon']['inUse'],str):
             handle_exception('Icon not exists: ' + edit_json['icon']['inUse'])
         tag['title'] = edit_json['title']; tag['icon'] = edit_json['icon']['inUse'] 
         return t
@@ -325,7 +326,7 @@ def insert_tag(t):
             tag_id = '0'
     tags.update( {tag_id : tag} )
 
-def remove_tag(t): #TODO recursive delete entries
+def remove_tag(t, recursiv=False): #TODO recursive delete entries
     global db_json; global entries
     tag_id = t[0]; tag = t[1]
     if tag_id == '0':
@@ -333,7 +334,10 @@ def remove_tag(t): #TODO recursive delete entries
     del db_json['tags'][tag_id]
     es = get_entries_by_tag(tag_id)
     for e in es:
-        entries[e]['tags'].remove(int(tag_id))
+        if recursive:
+            del db_json['entries'][e[0]]
+        else:   
+            entries[e]['tags'].remove(int(tag_id))
 
 def handle_exception(message, ex=None, code=None):
     logging.error(message)
@@ -621,15 +625,16 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
 
 @cli.command()
 @click.option('--tag', '-t', type=TagName(), help='remove tag', nargs=1, autocompletion=tab_completion_tags)
+@click.option('--recursive', '-r', is_flag=True, help='recursive remove entries in tag')
 @click.option('--force', '-f', is_flag=True, help='force without confirmation')
 @click.argument('entry-name', type=EntryName(), default='', nargs=1, autocompletion=tab_completion_entries)
-def remove(entry_name, tag, force):# TODO make options TRU/FALSE tag and -1 all args
+def remove(entry_name, tag, recursive, force):# TODO make options TRU/FALSE tag and -1 all args
     '''Remove entry or tag'''
     unlock_storage()
     global db_json
     if tag:
         t = get_tag(tag)
-        remove_tag(t)
+        remove_tag(t, recursive)
         if force or click.confirm('Delete tag: ' + click.style(t[1]['title'], bold=True)):
             save_storage()
     else:
@@ -715,31 +720,34 @@ def lock():
         click.echo(click.style('nothing to delete', bold=True)) 
     clean_exit()
 
-@cli.command(name='export')
+@cli.command(name='export')# TODO CSV
 @click.argument('tag-name', default='all', type=click.STRING, nargs=1, autocompletion=tab_completion_tags)
 @click.argument('entry-name', type=click.STRING, nargs=-1, autocompletion=tab_completion_entries)
 @click.option('-p', '--path', default=os.path.expanduser('~'), type=click.Path(), help='path for export')
 @click.option('-f', '--file-format', default='json', type=click.Choice(['json', 'csv','txt']), help='file format')
-def export_command(tag_name, entry_name, path, file_format):# TODO CSV
+def export_command(tag_name, entry_name, path, file_format):
     '''Export password store'''
     global entries
     unlock_storage()
-    with click.progressbar(entries, label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:
+    export_passwords = {}
+    with click.progressbar(entries.items(), label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:
         for e in bar:
-            entries[e] = unlock_entry(e)[1]
+            e = unlock_entry(e)
+            export_passwords.update( {str(e[0]) : {'item/url*':e[1]['note'], 'username':e[1]['username'], 'password':e[1]['password']['data'], 'secret':e[1]['safe_note']['data']}} )
     if file_format == 'json':
-        with open(os.path.join('.', 'export.json'), 'w', encoding='utf8') as f:
-            json.dump(entries, f)
+        with open(os.path.join(CONFIG_PATH, 'export.json'), 'w', encoding='utf8') as f:
+            json.dump(export_passwords, f)
     elif file_format == 'csv':
-        with open(os.path.join('.', 'export.csv'), 'w') as f:
-            writer = csv.writer(f, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            for e in entries.items():
-                writer.writerow({e['note'], e['title'], e['username'],e['password']['data'],e['safe_note']['data']})
+        return
+        # with open(os.path.join('.', 'export.csv'), 'w') as f:
+        #     writer = csv.writer(f, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        #     for e in entries.items():
+        #         writer.writerow({e['note'], e['title'], e['username'],e['password']['data'],e['safe_note']['data']})
     clean_exit()
 
 @cli.command(name='import')
 @click.option('-p', '--path', type=click.Path(), help='path to import file')
-def import_command(path):# TODO CSV   
+def import_command(path):
     '''Import password store'''
     unlock_storage()
     for e in es.items():

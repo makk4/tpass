@@ -1,16 +1,19 @@
 * Basic features
 ** TODO Export
-*** TODO json
+*** DONE json
 *** TODO CSV
 ** TODO Import
 *** TODO json
 *** TODO CSV
-** DONE Make own click parameter instead of parse_name
+** TODO check for 'title' 'note' 'item' 'url' on TPM
+** TODO check for valid symbols on TPM
 ** TODO input parsing should handle all symbols in names -> -u, -t, -i, -p, -s
-** TODO check typeof when getting edit input and config parse
 ** TODO get cryptomodul correct and secure
 *** TODO check if Nonce changes on every edit in TPM
+*** TODO password generation
 ** TODO fish auto completion
+** DONE check typeof when getting edit input and config parse
+** DONE Make own click parameter instead of parse_name
 ** DONE support for case sensitive Names
 ** DONE Print unicode symbols correct
 ** DONE device entropy
