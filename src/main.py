@@ -402,6 +402,10 @@ class TagName(click.ParamType): # TODO check for String
         tag = value.split('/')[0]
         return tag
 
+class SettingValue(click.ParamType): # TODO check for String
+    def convert(self, value, param, ctx):
+        return value
+
 class AliasedGroup(click.Group):
     def get_command(self, ctx, cmd_name):
         try:
@@ -627,8 +631,8 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
 @click.option('--tag', '-t', type=TagName(), help='remove tag', nargs=1, autocompletion=tab_completion_tags)
 @click.option('--recursive', '-r', is_flag=True, help='recursive remove entries in tag')
 @click.option('--force', '-f', is_flag=True, help='force without confirmation')
-@click.argument('entry-name', type=EntryName(), default='', nargs=1, autocompletion=tab_completion_entries)
-def remove(entry_name, tag, recursive, force):# TODO make options TRU/FALSE tag and -1 all args
+@click.argument('entry-names', type=EntryName(), nargs=-1, autocompletion=tab_completion_entries)
+def remove(entry_names, tag, recursive, force):# TODO make options TRU/FALSE tag and -1 all args
     '''Remove entry or tag'''
     unlock_storage()
     global db_json
@@ -638,9 +642,12 @@ def remove(entry_name, tag, recursive, force):# TODO make options TRU/FALSE tag 
         if force or click.confirm('Delete tag: ' + click.style(t[1]['title'], bold=True)):
             save_storage()
     else:
-        entry_id = get_entry(entry_name)[0]
-        del db_json['entries'][entry_id]
-        if force or click.confirm('Delete entry ' + click.style(entries[entry_id]['title'], bold=True)):
+        names = []
+        for name in entry_names:
+            entry_id = get_entry(name)[0]
+            names.append(entries[entry_id]['title'])
+            del db_json['entries'][entry_id]
+        if force or click.confirm('Delete entries ' + click.style(', '.join(names), bold=True)):
             save_storage()
     clean_exit()
 
@@ -688,7 +695,7 @@ def git(commands):
 @click.option('--edit', '-e', is_flag=True, help='edit config')
 @click.option('--reset', '-r', is_flag=True, help='reset config')
 @click.argument('setting-name', type=click.STRING, default='', nargs=1, autocompletion=tab_completion_config)
-@click.argument('setting-value', type=click.STRING, default='', nargs=1)
+@click.argument('setting-value', type=SettingValue(), default='', nargs=1) # TODO autocompletion based on setting-name
 def config(edit, reset, setting_name, setting_value): # TODO parse settings
     '''Configuration settings'''
     global CONFIG
@@ -696,7 +703,8 @@ def config(edit, reset, setting_name, setting_value): # TODO parse settings
         click.edit(filename=CONFIG_FILE, require_save=True)
     elif reset:
         if os.path.isfile(CONFIG_FILE):
-            os.remove(CONFIG_FILE)
+            if click.confirm('Reset config?'):
+                os.remove(CONFIG_FILE)
     else:
         if CONFIG.get(setting_name):
             CONFIG[setting_name] = setting_value
@@ -745,15 +753,29 @@ def export_command(tag_name, entry_name, path, file_format):
         #         writer.writerow({e['note'], e['title'], e['username'],e['password']['data'],e['safe_note']['data']})
     clean_exit()
 
-@cli.command(name='import')
-@click.option('-p', '--path', type=click.Path(), help='path to import file')
-def import_command(path):
+@cli.command(name='import')# TODO CSV; check for file extension
+@click.argument('path-to-file', type=click.Path(), nargs=1)
+def import_command(path_to_file):
     '''Import password store'''
     unlock_storage()
-    for e in es.items():
-        lock_entry(e)
-        insert_entry(e)
-        save_storage()
+    try:
+        if os.path.isfile(path_to_file):
+            with open(path_to_file) as f:
+                es = json.load(f)
+    except Exception as ex:
+        handle_exception('', ex)
+    with click.progressbar(es.items(), label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:    
+        for k,v in bar:
+            if 'item/url*' not in v or 'username' not in v or 'password' not in v or 'secret' not in v:
+                handle_exception('Import gone wrong')
+            if not isinstance(v['item/url*'],str) or not isinstance(v['username'],str) or not isinstance(v['password'],str) or not isinstance(v['secret'],str):
+                handle_exception('Import gone wrong')
+            if v['item/url*'] == '':
+                handle_exception('item/url* field is mandatory')
+            e = ('',{'title': v['item/url*'], 'username': v['username'], 'password': {'type': 'String', 'data': v['password']}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': v['secret']}, 'note': v['item/url*'], 'success': True, 'export': True})
+            e = lock_entry(e)
+            insert_entry(e)
+    save_storage()
     clean_exit()
 
 ALIASES = {

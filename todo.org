@@ -1,9 +1,9 @@
 * Basic features
-** TODO Export
+** DONE Export
 *** DONE json
 *** TODO CSV
-** TODO Import
-*** TODO json
+** DONE Import
+*** DONE json
 *** TODO CSV
 ** TODO check for 'title' 'note' 'item' 'url' on TPM
 ** TODO check for valid symbols on TPM
@@ -19,7 +19,7 @@
 ** DONE device entropy
 * Optimze
 ** TODO reduce complexity
-** TODO multiple entries at once on rm, show
+** DONE multiple entries at once on rm, show
 ** TODO insert, edit with cli parameters
 ** TODO put get_client in trezor.py logic make class?
 ** TODO refactor db into seperate class, needed for testing and import
@@ -33,6 +33,7 @@
 ** TODO wiki/docs
 ** TODO subrepo trezorlib for testing
 * dev workflow
+** TODO error codes on exit
 ** TODO pipenv
 ** TODO write unittests for every method
 *** TODO docker emulator
