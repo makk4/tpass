@@ -75,6 +75,6 @@ unlock    Unlock Storage and writes plain metadata to disk
 - Export, import database in JSON, CSV
 - Do not store metadata on disk mode
 - Combine entropy from device and os.random for all crypto functions
-- Bash, ZSH and Fish-Shell Auto Completion
+- Bash and zsh auto completion
 
 ## **Docs**

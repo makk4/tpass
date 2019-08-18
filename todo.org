@@ -1,22 +1,21 @@
 * Basic features
-** DONE Export
-*** DONE json
-*** TODO CSV
-** DONE Import
-*** DONE json
-*** TODO CSV
 ** TODO check for 'title' 'note' 'item' 'url' on TPM
 ** TODO check for valid symbols on TPM
 ** TODO input parsing should handle all symbols in names -> -u, -t, -i, -p, -s
 ** TODO get cryptomodul correct and secure
 *** TODO check if Nonce changes on every edit in TPM
 *** TODO password generation
-** TODO fish auto completion
 ** DONE check typeof when getting edit input and config parse
 ** DONE Make own click parameter instead of parse_name
 ** DONE support for case sensitive Names
 ** DONE Print unicode symbols correct
 ** DONE device entropy
+** DONE Export
+*** DONE json
+*** TODO CSV
+** DONE Import
+*** DONE json
+*** TODO CSV
 * Optimze
 ** TODO reduce complexity
 ** DONE multiple entries at once on rm, show
@@ -33,10 +32,10 @@
 ** TODO wiki/docs
 ** TODO subrepo trezorlib for testing
 * dev workflow
-** TODO error codes on exit
-** TODO pipenv
 ** TODO write unittests for every method
-*** TODO docker emulator
+** TODO pipenv
+** TODO docker emulator
+** DONE error codes on exit
 ** DONE logging and debug info
 ** DONE direnv
 ** DONE pyenv
