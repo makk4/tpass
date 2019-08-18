@@ -143,7 +143,7 @@ def getEntropy(client, length):
     return entropy
 
 def getTrezorKeys(client):
-    masterKey = decryptMasterKey(client)  
+    masterKey = decryptMasterKey(client)
     return getFileEncKey(masterKey)
 
 def getTrezorClient():

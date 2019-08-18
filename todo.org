@@ -1,4 +1,5 @@
 * Basic features
+** TODO proper error handling and logging with new class
 ** TODO check for 'title' 'note' 'item' 'url' on TPM
 ** TODO check for valid symbols on TPM
 ** TODO input parsing should handle all symbols in names -> -u, -t, -i, -p, -s
@@ -18,13 +19,12 @@
 *** TODO CSV
 * Optimze
 ** TODO reduce complexity
-** DONE multiple entries at once on rm, show
-** TODO insert, edit with cli parameters
+** TODO insert entrie/tag with cli parameters
 ** TODO put get_client in trezor.py logic make class?
-** TODO refactor db into seperate class, needed for testing and import
-*** TODO refactor edit into seperate method
 ** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
 ** TODO simplejson error checking
+** DONE multiple entries at once on rm, show
+** DONE refactor db into seperate class, needed for testing and import
 ** DONE click aliase
 ** DONE click python keywords
 * repository

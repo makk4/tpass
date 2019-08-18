@@ -68,7 +68,7 @@ def encryptStorage(db_json, store_path, encKey, iv): #TODO put file writing in m
     with open(store_path, 'wb') as f:
         f.write(cipherText)
             
-def generatePassword(length, entropy=None):
+def generatePassword(length):
     chars = (string.digits + string.ascii_letters + string.punctuation)
     while True:
         password = ''.join(random.choice(chars) for x in range(length))
@@ -78,7 +78,7 @@ def generatePassword(length, entropy=None):
             break
     return password
 
-def generatePassphrase(length, words, seperator, entropy=None):
+def generatePassphrase(length, words, seperator):
     winners = []
     if entropy is None:
         for i in range(0, int(length)):
@@ -88,7 +88,7 @@ def generatePassphrase(length, words, seperator, entropy=None):
     else:
         return entropy
 
-def generatePin(length, entropy=None):
+def generatePin(length):
     pin = ''
     for i in range(0, int(length)):
         pin = pin + str(secrets.randbelow(10))

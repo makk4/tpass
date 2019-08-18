@@ -2,6 +2,7 @@ import click
 from src import trezor
 from src import crypto
 
+ICONS = {'home':u'\U0001f3e0', 'person-stalker':u'\U0001F469\u200D\U0001F467', 'social-bitcoin':'₿', 'person':u'\U0001F642', 'star':u'\u2B50', 'flag':u'\U0001F3F3', 'heart':u'\u2764', 'settings':u'\u2699', 'email':u'\u2709', 'cloud':u'\u2601', 'alert-circled':u'\u26a0', 'android-cart':u'\U0001f6d2', 'image':u'\U0001F5BC', 'card':u'\U0001f4b3', 'earth':u'\U0001F310', 'wifi':u'\U0001f4f6'}
 client = None
 
 def get_client():
@@ -9,13 +10,12 @@ def get_client():
     if client is None:
         client = trezor.getTrezorClient()
 
-# TODO all trezor functions here; get_plain_db, get_enc_db methods
 class PasswordStore(object):
-    tags = {'0': {'title': 'All', 'icon': 'home'},}
+    tags = {}
     entries = {}
     db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
 
-    def __init__(self, entries, tags):
+    def __init__(self, entries={}, tags={'0': {'title': 'All', 'icon': 'home'},}):
         self.entries = entries
         self.tags = tags
         self.db_json['entries'] = entries; self.db_json['tags'] = tags
@@ -25,7 +25,16 @@ class PasswordStore(object):
         get_client()
         keys = trezor.getTrezorKeys(client)
         db_json = crypto.decryptStorage(filepath, keys[2])
+        if 'entries' not in db_json or 'tags' not in db_json:
+            raise ValueError('Parse error while loading password file')
         return cls(db_json['entries'], db_json['tags'])
+
+    def get_encrypted_db(self, filepath):
+        get_client()
+        keys = trezor.getTrezorKeys(client)
+        encKey = keys[2]
+        iv = trezor.getEntropy(client, 12)
+        crypto.encryptStorage(self.db_json, filepath, encKey, iv)
 
     def get_entry(self, names):
         tag = names[0]; note = names[1]; username = names[2]; entry_id = names[3]
@@ -65,7 +74,7 @@ class PasswordStore(object):
                 click.echo(start + v['note'] + ':' + click.style(v['username'], fg='green') + click.style('#' + k, fg='magenta'))
             i = i + 1
 
-    def print_tags(self, ts, includeEntries=False, showIcons=False):#TODO optimze
+    def print_tags(self, ts, showIcons=False, includeEntries=False):#TODO optimze
         for k,v in ts.items():
             if showIcons:
                 icon = ICONS.get(v['icon']) + ' ' or '? '
@@ -89,7 +98,8 @@ class PasswordStore(object):
                 tags_str = tags_str + icon + v['title'] + ' '
         return tags_str.strip()
 
-    def unlock_entry(self, e, client):
+    def unlock_entry(self, e):
+        get_client()
         entry_id = e[0]; entry = e[1]
         if entry['success'] is False or entry['export'] is True:
             handle_exception('Error while unlocking entry', 15)
@@ -107,7 +117,8 @@ class PasswordStore(object):
             handle_exception('Error while decrypting entry', 16, ex)
         return e
 
-    def lock_entry(self, e, client):
+    def lock_entry(self, e):
+        get_client()
         entry_id = e[0]; entry = e[1]
         if entry['success'] is False or entry['export'] is False:
             handle_exception('Error while locking entry', 17)

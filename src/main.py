@@ -18,7 +18,6 @@ from src import trezor
 from src import crypto
 from src import password
 
-ICONS = {'home':u'\U0001f3e0', 'person-stalker':u'\U0001F469\u200D\U0001F467', 'social-bitcoin':'₿', 'person':u'\U0001F642', 'star':u'\u2B50', 'flag':u'\U0001F3F3', 'heart':u'\u2764', 'settings':u'\u2699', 'email':u'\u2709', 'cloud':u'\u2601', 'alert-circled':u'\u26a0', 'android-cart':u'\U0001f6d2', 'image':u'\U0001F5BC', 'card':u'\U0001f4b3', 'earth':u'\U0001F310', 'wifi':u'\U0001f4f6'}
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
 DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
@@ -99,17 +98,7 @@ def save_storage():
         handle_exception('Lockfile changed, aborting', 10)
     if not os.path.isfile(PWD_FILE) or os.path.getmtime(PWD_FILE) != LOCK['pwd_last_change_time']:
         handle_exception('Password file changed, aborting', 11)
-    get_client()
-    try:
-        keys = trezor.getTrezorKeys(client)
-        encKey = keys[2]
-        iv = trezor.getEntropy(client, 12)
-    except Exception as ex:
-        handle_exception('Error while accessing trezor device', 2, ex)
-    try:
-        crypto.encryptStorage(pwd.db_json, PWD_FILE, encKey, iv)
-    except Exception as ex:
-        handle_exception('Error while encrypting storage', 12, ex)
+    pwd.get_encrypted_db(PWD_FILE)
     if CONFIG['storeMetaDataOnDisk'] is True:
         with open(TMP_FILE, 'w') as f:
             json.dump(pwd.db_json, f) 
@@ -150,7 +139,7 @@ def get_client():
 def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
     entry = e[1]
     if entry['export'] is False:
-        e = unlock_entry(e, get_client())
+        e = unlock_entry(e)
     if entry['success'] is False:
         handle_exception('Error while editing entry', 20)
     entry['success'] = False
@@ -175,12 +164,14 @@ def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
             edit_json['tags']['inUse'].remove(0)
         entry['tags'] = edit_json['tags']['inUse']
         entry['success'] = True
-        return lock_entry(e, get_client())
+        return lock_entry(e)
     handle_exception('Aborted!', 0)
 
 def edit_tag(t):
     tag_id = t[0]; tag = t[1]
-    edit_json = {'title': tag['title'], 'icon': {"inUse":tag['icon'], 'chooseFrom:':', '.join(ICONS)}}
+    if tag_id == '0':
+        handle_exception('All not editable', 28)
+    edit_json = {'title': tag['title'], 'icon': {"inUse":tag['icon'], 'chooseFrom:':', '.join(password.ICONS)}}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
     if edit_json:
         try:
@@ -189,7 +180,7 @@ def edit_tag(t):
             handle_exception('Edit gone wrong', 26, ex)
         if 'title' not in edit_json or edit_json['title'] == '' or not isinstance(edit_json['title'],str):
             handle_exception('Title field is mandatory', 27)
-        if 'icon' not in edit_json or 'inUse' not in edit_json['icon'] or edit_json['icon']['inUse'] not in ICONS or not isinstance(edit_json['icon']['inUse'],str):
+        if 'icon' not in edit_json or 'inUse' not in edit_json['icon'] or edit_json['icon']['inUse'] not in password.ICONS or not isinstance(edit_json['icon']['inUse'],str):
             handle_exception('Icon not exists: ' + edit_json['icon']['inUse'], 28)
         tag['title'] = edit_json['title']; tag['icon'] = edit_json['icon']['inUse'] 
         return t
@@ -323,6 +314,7 @@ def init(path, cloud, pinentry, no_disk):
     if cloud == 'git':
         CONFIG['useGit'] = True
         subprocess.call('git init', cwd=CONFIG['path'], shell=True)
+    pwd = password.PasswordStore()
     get_client()
     try:
         keys = trezor.getTrezorKeys(client)
@@ -351,7 +343,7 @@ def find(name):
         if name.lower() in v['title'].lower():
             ts.update({k : v}) 
     pwd.print_entries(es)
-    pwd.print_tags(ts)
+    pwd.print_tags(ts, CONFIG['showIcons'])
     clean_exit()
 
 @cli.command()
@@ -361,7 +353,7 @@ def grep(name, case_insensitive):
     '''Search for names in decrypted entries'''
     unlock_storage()
     for k, v in pwd.entries.items():
-        v = pwd.unlock_entry((k,v), get_client())[1]
+        v = pwd.unlock_entry((k,v))[1]
         for kk, vv in v.items():
             if kk in ['note', 'title', 'username']:
                 if name.lower() in vv.lower():
@@ -378,10 +370,10 @@ def list_command(tag_name):
     '''List entries by tag'''
     unlock_storage()
     if tag_name == '':
-        pwd.print_tags(pwd.tags, True)
+        pwd.print_tags(pwd.tags, CONFIG['showIcons'], True)
     else:
         t = pwd.get_tag(tag_name)
-        pwd.print_tags({t[0] : t[1]}, True)
+        pwd.print_tags({t[0] : t[1]}, CONFIG['showIcons'], True)
     clean_exit()
     
 @cli.command()
@@ -399,7 +391,7 @@ def show(entry_names, secrets, json):
             password = '********'
             safeNote = '********'
         else:
-            e = pwd.unlock_entry(e, get_client())
+            e = pwd.unlock_entry(e)
             password = entry['password']['data']
             safeNote = entry['safe_note']['data']
         if json:
@@ -433,7 +425,7 @@ def clip(user, url, secret, entry_name):
     elif url:
         pyperclip.copy(entry['title'])
     else:
-        e = pwd.unlock_entry(e, get_client())
+        e = pwd.unlock_entry(e)
         if secret:
             pyperclip.copy(entry['safe_note']['data'])
         else:
@@ -448,29 +440,23 @@ def clip(user, url, secret, entry_name):
 @click.option('-t', '--type','type_', default='password', type=click.Choice(['password', 'wordlist', 'pin']), help='type of password')
 @click.option('-s', '--seperator', default=' ', type=click.STRING, help='seperator for passphrase')
 @click.option('-f', '--force', is_flag=True, help='force without confirmation')
-@click.option('-d', '--entropy', is_flag=True, help='entropy from trezor device and host mixed')
 def generate(length, insert, type_, clip, seperator, force, entropy):
     '''Generate new password'''
     global db_json
     if (length < 6 and type_ is 'password') or (length < 3 and type_ is 'wordlist') or (length < 4 and type_ is 'pin'):
         if not click.confirm('Warning: ' + length + ' is too short for password with type ' + type_ + '. Continue?'):
             handle_exception('Aborted', 0)
-    if entropy:
-        get_client()
-        entropy = trezor.getEntropy(client, length)
-    else:
-        entropy = None
     if type_ == 'wordlist':
         words = load_wordlist()
-        password = crypto.generatePassphrase(length, words, seperator, entropy)
+        password = crypto.generatePassphrase(length, words, seperator)
     elif type_ == 'pin':
-        password = crypto.generatePin(length, entropy)
+        password = crypto.generatePin(length)
     elif type_ == 'password':
-        password = crypto.generatePassword(length, entropy)
+        password = crypto.generatePassword(length)
     if insert:
         unlock_storage()
         e = pwd.get_entry(insert)
-        e = pwd.unlock_entry(e, get_client())
+        e = pwd.unlock_entry(e)
         e[1]['password']['data'] = password
         e = edit_entry(e)
         pwd.insert_entry(e)
@@ -596,7 +582,7 @@ def export_command(tag_name, entry_name, path, file_format):
     export_passwords = {}
     with click.progressbar(pwd.entries.items(), label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:
         for e in bar:
-            e = pwd.unlock_entry(e, get_client())
+            e = pwd.unlock_entry(e)
             export_passwords.update( {str(e[0]) : {'item/url*':e[1]['note'], 'username':e[1]['username'], 'password':e[1]['password']['data'], 'secret':e[1]['safe_note']['data']}} )
     if file_format == 'json':
         with open(os.path.join(CONFIG_PATH, 'export.json'), 'w', encoding='utf8') as f:
@@ -625,7 +611,7 @@ def import_command(path_to_file):
             if v['item/url*'] == '':
                 handle_exception('item/url* field is mandatory', 6)
             e = ('',{'title': v['item/url*'], 'username': v['username'], 'password': {'type': 'String', 'data': v['password']}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': v['secret']}, 'note': v['item/url*'], 'success': True, 'export': True})
-            e = pwd.lock_entry(e, get_client())
+            e = pwd.lock_entry(e)
             pwd.insert_entry(e)
     save_storage()
     clean_exit()
