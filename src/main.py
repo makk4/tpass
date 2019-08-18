@@ -16,6 +16,7 @@ except:
     import json
 from src import trezor
 from src import crypto
+from src import password
 
 ICONS = {'home':u'\U0001f3e0', 'person-stalker':u'\U0001F469\u200D\U0001F467', 'social-bitcoin':'₿', 'person':u'\U0001F642', 'star':u'\u2B50', 'flag':u'\U0001F3F3', 'heart':u'\u2764', 'settings':u'\u2699', 'email':u'\u2709', 'cloud':u'\u2601', 'alert-circled':u'\u26a0', 'android-cart':u'\U0001f6d2', 'image':u'\U0001F5BC', 'card':u'\U0001f4b3', 'earth':u'\U0001F310', 'wifi':u'\U0001f4f6'}
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
@@ -35,23 +36,13 @@ PWD_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
 TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
 TAG_NEW = ('',{'title': '', 'icon': 'home'})
 ENTRY_NEW = ('',{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True})
-
-tags = {'0': {'title': 'All', 'icon': 'home'},}
-entries = {}
-db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
 client = None
-
-# class PasswordStore(Object):
-#     tags = {'0': {'title': 'All', 'icon': 'home'},}
-#     entries = {}
-#     db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
-
-#     def __init__(self, db_json):
-#         self.db_json = db_json
+pwd = None
 
 '''
 Core Methods
 '''
+
 def load_config():
     global CONFIG; global TMP_FILE; global PWD_FILE
     if not os.path.isfile(CONFIG_FILE):
@@ -74,7 +65,7 @@ def write_config():
         json.dump(CONFIG, f, indent=4)
  
 def unlock_storage():
-    global LOCK; global db_json; global entries; global tags
+    global LOCK; global pwd
     if os.path.isfile(LOCK_FILE):
         sys.exit('Error: password store is locked by another instance, remove lockfile to proceed: ' + LOCK_FILE)
     if CONFIG['fileName'] == '' or not os.path.isfile(PWD_FILE):
@@ -84,24 +75,16 @@ def unlock_storage():
     if CONFIG['storeMetaDataOnDisk'] is True:
         tmp_need_update = not os.path.isfile(TMP_FILE) or (os.path.isfile(TMP_FILE) and (os.path.getmtime(TMP_FILE) < os.path.getmtime(PWD_FILE)))
     if CONFIG['storeMetaDataOnDisk'] is False or tmp_need_update:
-        get_client()
-        try:
-            keys = trezor.getTrezorKeys(client)
-            encKey = keys[2]
-        except Exception as ex:
-            handle_exception('Error while getting keys from device', 2, ex)
-        try:
-            db_json = crypto.decryptStorage(PWD_FILE, encKey)
-        except Exception as ex:
-            handle_exception('Error while decrypting storage', 8, ex)
-        entries = db_json['entries']; tags = db_json['tags']
+        pwd = password.PasswordStore.fromFile(PWD_FILE)
         if CONFIG['storeMetaDataOnDisk'] is True:
             with open(TMP_FILE, 'w') as f:
-                json.dump(db_json, f)
-    if CONFIG['storeMetaDataOnDisk'] is True:
+                json.dump(pwd.db_json, f)
+
+    if CONFIG['storeMetaDataOnDisk'] is True and not tmp_need_update:
         with open(TMP_FILE) as f:
             db_json = json.load(f)
-            entries = db_json['entries']; tags = db_json['tags']
+        pwd = password.PasswordStore(db_json['entries'], db_json['tags'])
+
     LOCK['pwd_last_change_time'] = os.path.getmtime(PWD_FILE)
     with open(LOCK_FILE, 'w', encoding='utf8') as f:
         json.dump(LOCK, f, indent=4)
@@ -124,12 +107,12 @@ def save_storage():
     except Exception as ex:
         handle_exception('Error while accessing trezor device', 2, ex)
     try:
-        crypto.encryptStorage(db_json, PWD_FILE, encKey, iv)
+        crypto.encryptStorage(pwd.db_json, PWD_FILE, encKey, iv)
     except Exception as ex:
         handle_exception('Error while encrypting storage', 12, ex)
     if CONFIG['storeMetaDataOnDisk'] is True:
         with open(TMP_FILE, 'w') as f:
-            json.dump(db_json, f) 
+            json.dump(pwd.db_json, f) 
     if CONFIG['useGit'] is True:
         subprocess.call('git commit -m "update db"', cwd=CONFIG['path'], shell=True)
 
@@ -162,124 +145,12 @@ def get_client():
             client = trezor.getTrezorClient()
         except Exception as ex:
             handle_exception('Error while accessing trezor device', 2, ex)
-
-def get_entry(names):#TODO optimze; remove exception; compare tags given
-    tag = names[0]; note = names[1]; username = names[2]; entry_id = names[3]
-    if entry_id != '' and entries.get(entry_id):
-        return entry_id, entries[entry_id]
-    for k, v in entries.items():
-        if note == v['note']:
-            if username == '' or username == v['username']:
-                return k, v
-    handle_exception(', '.join(names) + ' is not in the password store', 0)
-
-def get_tag(tag_name):#TODO optimze; remove exception
-    for k, v in tags.items():
-        if tag_name == v['title']:
-            return k, v
-    handle_exception(tag_name + ' is not a tag in the password store', 0)
-
-def get_entries_by_tag(tag_id):#TODO optimze
-    es = {}
-    for k, v in entries.items():
-        if int(tag_id) in v['tags'] or int(tag_id) == 0 and v['tags'] == []:
-            es.update( {k : v} )  
-    return es
-
-def print_entries(es, includeTree=False):#TODO optimze
-    if includeTree:
-        start = '  ' + u'\u251C' + u'\u2500' + u'\u2500' + ' '; start_end = '  ' + u'\u2514' + u'\u2500' + u'\u2500' + ' '
-    else:
-        start = ''; start_end = ''
-    i = 0
-    for k,v in es.items():
-        if i == len(es)-1:
-            click.echo(start_end + v['note'] + ':' + click.style(v['username'], fg='green') + click.style('#' + k, fg='magenta'))
-        else:
-            click.echo(start + v['note'] + ':' + click.style(v['username'], fg='green') + click.style('#' + k, fg='magenta'))
-        i = i + 1
-
-def print_tags(ts, includeEntries=False):#TODO optimze
-    for k,v in ts.items():
-        if CONFIG['showIcons'] is True:
-            icon = ICONS.get(v['icon']) + ' ' or '? '
-        else:
-            icon = ''
-        click.echo(icon + click.style(v['title'], bold=True , fg='blue'))
-        if includeEntries:
-            es = get_entries_by_tag(k)
-            print_entries(es, True)
-
-def tags_to_string(ts, includeIds=False, showIcons=True):
-    tags_str = ''
-    for k,v in ts.items():
-        if CONFIG['showIcons'] is True and showIcons:
-            icon = ICONS.get(v['icon']) + ' ' or '? '
-        else:
-            icon = ''
-        if includeIds:
-            tags_str = tags_str + k + ':' + icon + v['title'] + ' '
-        else:
-            tags_str = tags_str + icon + v['title'] + ' '
-    return tags_str.strip()
-
-def unlock_entry(e):
-    entry_id = e[0]; entry = e[1]
-    if entry['success'] is False or entry['export'] is True:
-        handle_exception('Error while unlocking entry', 15)
-    entry['success'] = False; entry['export'] = True
-    try:   
-        get_client()
-        plain_nonce = trezor.getDecryptedNonce(client, entry)
-    except Exception as ex:
-        handle_exception('Error while accessing trezor device', 2, ex)    
-    try:
-        entry['password']['data'] = crypto.decryptEntryValue(plain_nonce, entry['password']['data'])
-        entry['safe_note']['data'] = crypto.decryptEntryValue(plain_nonce, entry['safe_note']['data'])
-        entry['password']['type'] = 'String'; entry['safe_note']['type'] = 'String'
-        entry['success'] = True
-    except Exception as ex:
-        handle_exception('Error while decrypting entry', 16, ex)
-    return e
-
-def lock_entry(e):
-    entry_id = e[0]; entry = e[1]
-    if entry['success'] is False or entry['export'] is False:
-        handle_exception('Error while locking entry', 17)
-    entry['success'] = False; entry['export'] = False
-    try:
-        get_client()
-        entry['nonce'] = trezor.getEncryptedNonce(client, entry)
-        plain_nonce = trezor.getDecryptedNonce(client, entry)
-        iv_pwd = trezor.getEntropy(client, 12)
-        iv_secret = trezor.getEntropy(client, 12)
-    except Exception as ex:
-        handle_exception('Error while accessing trezor device', 2, ex)
-    try:
-        entry['password']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']), iv_pwd)
-        entry['safe_note']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']), iv_secret)
-        entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
-        entry['success'] = True
-    except Exception as ex:
-        handle_exception('Error while encrypting entry', 18, ex)
-    return e
-
-def insert_entry(e):
-    global entries
-    entry_id = e[0]; entry = e[1]
-    if entry['success'] is False or entry['export'] is True:
-        handle_exception('Error while inserting entry', 19)
-    if entry_id == '':
-        for k in entries.keys():
-            entry_id = str(int(k) + 1)
-        if entry_id == '':
-            entry_id = '0'
-    entries.update( {entry_id : entry} )
+    return client
 
 def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
     entry = e[1]
     if entry['export'] is False:
-        e = unlock_entry(e)
+        e = unlock_entry(e, get_client())
     if entry['success'] is False:
         handle_exception('Error while editing entry', 20)
     entry['success'] = False
@@ -304,7 +175,7 @@ def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
             edit_json['tags']['inUse'].remove(0)
         entry['tags'] = edit_json['tags']['inUse']
         entry['success'] = True
-        return lock_entry(e)
+        return lock_entry(e, get_client())
     handle_exception('Aborted!', 0)
 
 def edit_tag(t):
@@ -323,29 +194,6 @@ def edit_tag(t):
         tag['title'] = edit_json['title']; tag['icon'] = edit_json['icon']['inUse'] 
         return t
     handle_exception('Aborted!', 0)
-
-def insert_tag(t):
-    global tags
-    tag_id = t[0]; tag = t[1]
-    if tag_id == '':
-        for k in tags.keys():
-            tag_id = str(int(k) + 1)
-        if tag_id == '':
-            tag_id = '0'
-    tags.update( {tag_id : tag} )
-
-def remove_tag(t, recursiv=False): #TODO recursive delete entries
-    global db_json; global entries
-    tag_id = t[0]; tag = t[1]
-    if tag_id == '0':
-        handle_exception('Cannot remove <all> tag', 0)
-    del db_json['tags'][tag_id]
-    es = get_entries_by_tag(tag_id)
-    for e in es:
-        if recursive:
-            del db_json['entries'][e[0]]
-        else:   
-            entries[e]['tags'].remove(int(tag_id))
 
 def handle_exception(message, code=None, ex=None):
     logging.error(message)
@@ -368,8 +216,8 @@ def tab_completion_entries(ctx, args, incomplete):
     if os.path.isfile(LOCK_FILE):
         os.remove(LOCK_FILE)
     tabs = []
-    for k,v in tags.items():
-        es = get_entries_by_tag(k)
+    for k,v in pwd.tags.items():
+        es = pwd.get_entries_by_tag(k)
         for kk,vv in es.items():
             tabs.append(v['title'] + '/' + vv['note'] + ':' + vv['username'] + '#' + kk)
     return [k for k in tabs if incomplete.lower() in k.lower()]
@@ -380,8 +228,8 @@ def tab_completion_tags(ctx, args, incomplete):
     if os.path.isfile(LOCK_FILE):
         os.remove(LOCK_FILE)
     tabs = []
-    for t in tags:
-        tabs.append(tags[t]['title'] + '/')
+    for t in pwd.tags:
+        tabs.append(pwd.tags[t]['title'] + '/')
     return [k for k in tabs if incomplete.lower() in k.lower()]
 
 def tab_completion_config(ctx, args, incomplete):
@@ -496,14 +344,14 @@ def find(name):
     '''List entries and tags that match names'''
     unlock_storage()
     es = {}; ts = {}
-    for k,v in entries.items():
+    for k,v in pwd.entries.items():
         if name.lower() in v['note'].lower() or name.lower() in v['title'].lower() or name.lower() in v['username'].lower():
             es.update({k : v})
-    for k,v in tags.items():
+    for k,v in pwd.tags.items():
         if name.lower() in v['title'].lower():
             ts.update({k : v}) 
-    print_entries(es)
-    print_tags(ts)
+    pwd.print_entries(es)
+    pwd.print_tags(ts)
     clean_exit()
 
 @cli.command()
@@ -512,8 +360,8 @@ def find(name):
 def grep(name, case_insensitive):
     '''Search for names in decrypted entries'''
     unlock_storage()
-    for k, v in entries.items():
-        v = unlock_entry((k,v))[1]
+    for k, v in pwd.entries.items():
+        v = pwd.unlock_entry((k,v), get_client())[1]
         for kk, vv in v.items():
             if kk in ['note', 'title', 'username']:
                 if name.lower() in vv.lower():
@@ -530,10 +378,10 @@ def list_command(tag_name):
     '''List entries by tag'''
     unlock_storage()
     if tag_name == '':
-        print_tags(tags, True)
+        pwd.print_tags(pwd.tags, True)
     else:
-        t = get_tag(tag_name)
-        print_tags({t[0] : t[1]}, True)
+        t = pwd.get_tag(tag_name)
+        pwd.print_tags({t[0] : t[1]}, True)
     clean_exit()
     
 @cli.command()
@@ -544,30 +392,30 @@ def show(entry_names, secrets, json):
     '''Show entries'''
     unlock_storage()
     for name in entry_names:
-        e = get_entry(name)
+        e = pwd.get_entry(name)
         entry = e[1]; entry_id = e[0]
 
         if not secrets:
-            pwd = '********'
+            password = '********'
             safeNote = '********'
         else:
-            e = unlock_entry(e)
-            pwd = entry['password']['data']
+            e = pwd.unlock_entry(e, get_client())
+            password = entry['password']['data']
             safeNote = entry['safe_note']['data']
         if json:
             click.echo(e)
         else:
             ts = {}
             for i in entry['tags']:
-                ts[i] = tags.get(str(i))
+                ts[i] = pwd.tags.get(str(i))
 
             click.echo(click.style('#' + entry_id, bold=True, fg='magenta') + '\n' +
                 click.style('item/url*: ', bold=True) + entry['note'] + '\n' +
                 click.style('title:     ', bold=True) + entry['title'] + '\n' +
                 click.style('username:  ', bold=True) + entry['username'] + '\n' +
-                click.style('password:  ', bold=True) + pwd + '\n' +
+                click.style('password:  ', bold=True) + password + '\n' +
                 click.style('secret:    ', bold=True) + safeNote  + '\n' +
-                click.style('tags:      ', bold=True) + tags_to_string(ts))
+                click.style('tags:      ', bold=True) + pwd.tags_to_string(ts))
     clean_exit()
 
 @cli.command()
@@ -578,14 +426,14 @@ def show(entry_names, secrets, json):
 def clip(user, url, secret, entry_name):
     '''Decrypt and copy line of entry to clipboard'''
     unlock_storage()
-    e = get_entry(entry_name)
+    e = pwd.get_entry(entry_name)
     entry = e[1]; entry_id = e[0]
     if user:
         pyperclip.copy(entry['username'])
     elif url:
         pyperclip.copy(entry['title'])
     else:
-        e = unlock_entry(e)
+        e = pwd.unlock_entry(e, get_client())
         if secret:
             pyperclip.copy(entry['safe_note']['data'])
         else:
@@ -614,25 +462,25 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
         entropy = None
     if type_ == 'wordlist':
         words = load_wordlist()
-        pwd = crypto.generatePassphrase(length, words, seperator, entropy)
+        password = crypto.generatePassphrase(length, words, seperator, entropy)
     elif type_ == 'pin':
-        pwd = crypto.generatePin(length, entropy)
+        password = crypto.generatePin(length, entropy)
     elif type_ == 'password':
-        pwd = crypto.generatePassword(length, entropy)
+        password = crypto.generatePassword(length, entropy)
     if insert:
         unlock_storage()
-        e = get_entry(insert)
-        e = unlock_entry(e)
-        e[1]['password']['data'] = pwd
+        e = pwd.get_entry(insert)
+        e = pwd.unlock_entry(e, get_client())
+        e[1]['password']['data'] = password
         e = edit_entry(e)
-        insert_entry(e)
+        pwd.insert_entry(e)
         if force or click.confirm('Insert password in entry ' + click.style(e[1]['title'], bold=True)):
             save_storage()
     if clip:
-        pyperclip.copy(pwd)
+        pyperclip.copy(password)
         clear_clipboard()
     else:
-        click.echo(pwd)
+        click.echo(password)
     clean_exit()
 
 @cli.command()
@@ -645,16 +493,16 @@ def remove(entry_names, tag, recursive, force):# TODO make options TRU/FALSE tag
     unlock_storage()
     global db_json
     if tag:
-        t = get_tag(tag)
-        remove_tag(t, recursive)
+        t = pwd.get_tag(tag)
+        pwd.remove_tag(t, recursive)
         if force or click.confirm('Delete tag: ' + click.style(t[1]['title'], bold=True)):
             save_storage()
     else:
         names = []
         for name in entry_names:
-            entry_id = get_entry(name)[0]
-            names.append(entries[entry_id]['title'])
-            del db_json['entries'][entry_id]
+            entry_id = pwd.get_entry(name)[0]
+            names.append(pwd.entries[entry_id]['title'])
+            del pwd.db_json['entries'][entry_id]
         if force or click.confirm('Delete entries ' + click.style(', '.join(names), bold=True)):
             save_storage()
     clean_exit()
@@ -666,11 +514,11 @@ def insert(tag):
     unlock_storage()
     if tag:
         t = edit_tag(TAG_NEW)
-        insert_tag(t)
+        pwd.insert_tag(t)
         save_storage()
     else:
         e = edit_entry(ENTRY_NEW)
-        insert_entry(e)
+        pwd.insert_entry(e)
         save_storage()
     clean_exit()
 
@@ -681,14 +529,14 @@ def edit(entry_name, tag):#TODO option --entry/--tag with default
     '''Edit entry or tag'''
     unlock_storage()
     if tag:
-        t = get_tag(tag)
+        t = pwd.get_tag(tag)
         t = edit_tag(t)
-        insert_tag(t)
+        pwd.insert_tag(t)
         save_storage()
     else:
-        e = get_entry(entry_name)
+        e = pwd.get_entry(entry_name)
         e = edit_entry(e)
-        insert_entry(e)
+        pwd.insert_entry(e)
         save_storage()
     clean_exit()
 
@@ -746,19 +594,15 @@ def export_command(tag_name, entry_name, path, file_format):
     global entries
     unlock_storage()
     export_passwords = {}
-    with click.progressbar(entries.items(), label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:
+    with click.progressbar(pwd.entries.items(), label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:
         for e in bar:
-            e = unlock_entry(e)
+            e = pwd.unlock_entry(e, get_client())
             export_passwords.update( {str(e[0]) : {'item/url*':e[1]['note'], 'username':e[1]['username'], 'password':e[1]['password']['data'], 'secret':e[1]['safe_note']['data']}} )
     if file_format == 'json':
         with open(os.path.join(CONFIG_PATH, 'export.json'), 'w', encoding='utf8') as f:
             json.dump(export_passwords, f)
     elif file_format == 'csv':
         return
-        # with open(os.path.join('.', 'export.csv'), 'w') as f:
-        #     writer = csv.writer(f, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        #     for e in entries.items():
-        #         writer.writerow({e['note'], e['title'], e['username'],e['password']['data'],e['safe_note']['data']})
     clean_exit()
 
 @cli.command(name='import')# TODO CSV; check for file extension
@@ -781,8 +625,8 @@ def import_command(path_to_file):
             if v['item/url*'] == '':
                 handle_exception('item/url* field is mandatory', 6)
             e = ('',{'title': v['item/url*'], 'username': v['username'], 'password': {'type': 'String', 'data': v['password']}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': v['secret']}, 'note': v['item/url*'], 'success': True, 'export': True})
-            e = lock_entry(e)
-            insert_entry(e)
+            e = pwd.lock_entry(e, get_client())
+            pwd.insert_entry(e)
     save_storage()
     clean_exit()
 
