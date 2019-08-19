@@ -1,11 +1,7 @@
 * Basic features
-** TODO proper error handling and logging with new class
-** TODO check for 'title' 'note' 'item' 'url' on TPM
-** TODO check for valid symbols on TPM
-** TODO input parsing should handle all symbols in names -> -u, -t, -i, -p, -s
-** TODO get cryptomodul correct and secure
-*** TODO check if Nonce changes on every edit in TPM
-*** TODO password generation
+** TODO error handling and logging
+** TODO write unittests for every method
+** TODO reduce complexity
 ** DONE check typeof when getting edit input and config parse
 ** DONE Make own click parameter instead of parse_name
 ** DONE support for case sensitive Names
@@ -18,7 +14,7 @@
 *** DONE json
 *** TODO CSV
 * Optimze
-** TODO reduce complexity
+** TODO get cryptomodul correct and secure
 ** TODO insert entrie/tag with cli parameters
 ** TODO put get_client in trezor.py logic make class?
 ** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
@@ -32,13 +28,19 @@
 ** TODO wiki/docs
 ** TODO subrepo trezorlib for testing
 * dev workflow
-** TODO write unittests for every method
+** TODO naming conventions
 ** TODO pipenv
 ** TODO docker emulator
 ** DONE error codes on exit
 ** DONE logging and debug info
 ** DONE direnv
 ** DONE pyenv
+* TPM compatible
+** TODO check for 'title' 'note' 'item' 'url' on TPM
+** TODO check for valid symbols on TPM
+** TODO input parsing should handle all symbols in names -> -u, -t, -i, -p, -s
+** TODO export all fields like trezor, make import edit for choosing field order
+** TODO check if Nonce changes on every edit in TPM
 
 * Done
 ** DONE check for other instances or changed pwd file -> lockfile

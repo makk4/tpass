@@ -33,79 +33,8 @@ CLIPBOARD_CLEAR_TIME = 15
 CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True, 'showIcons': False}
 PWD_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
 TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
-ERROR_CODES = {
-    'CONFIG_READ_ERROR':{
-        'message':'Config read error: ' + CONFIG_PATH,
-        'code':1
-        },
-    'CONFIG_PARSE_ERROR':{
-        'message':'Config parse error: ' + CONFIG_PATH,
-        'code':2
-        },
-    'CONFIG_WRITE_ERROR':{
-        'message':'Config write error: ' + CONFIG_PATH,
-        'code':3
-        },
-    'NOT_INITIALIZED':{
-        'message':'Password store is not initialized',
-        'code':4
-        },
-    'PASSWORD_UNLOCK_READ_ERROR':{
-        'message':'Password store unlocking error',
-        'code':5
-        },
-    'LOCKFILE_DELETED':{
-        'message':'Lockfile deleted, aborted',
-        'code':6
-        },
-    'LOCKFILE_CHANGED':{
-        'message':'Lockfile changed, aborted',
-        'code':7
-        },
-    'PASSWORD_FILE_CHANGED':{
-        'message':'Password file changed, aborted',
-        'code':8
-        },
-    'DICEWARE_FILE_PARSE_ERROR':{
-        'message':'Wordlist parse error: ' + DICEWARE_FILE,
-        'code':9
-        },
-    'TREZOR_DEVICE_ERROR':{
-        'message':'Error while accessing trezor device',
-        'code':10
-        },
-    'EDIT_ERROR':{
-        'message':'Edit gone wrong',
-        'code':11
-        },
-    'ITEM_FIELD_ERROR':{
-        'message':'item/url* field is mandatory',
-        'code':12
-        },
-    'WRONG_TAG_ERROR':{
-        'message':'Tag not exist: ',
-        'code':13
-        },
-    'TITLE_FIELD_ERROR':{
-        'message':'Title* field is mandatory',
-        'code':14
-        },
-    'WRONG_ICON_ERROR':{
-        'message':'Icon not exists: ',
-        'code':15
-        },
-    'ABORTED':{
-        'message':'Aborted',
-        'code':15
-        },
-    'IMPORT_ERROR':{
-        'message':'Import gone wrong',
-        'code':16
-        },
-    }
 TAG_NEW = ('',{'title': '', 'icon': 'home'})
 ENTRY_NEW = ('',{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True})
-client = None
 pwd = None
 
 '''
@@ -205,15 +134,6 @@ def clear_clipboard():
         for i in bar:
             time.sleep(1)
     pyperclip.copy('')
-
-def get_client():
-    global client
-    if client is None:
-        try:
-            client = trezor.getTrezorClient()
-        except Exception as ex:
-            handle_exception('TREZOR_DEVICE_ERROR')
-    return client
 
 def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
     entry = e[1]
@@ -389,18 +309,11 @@ def init(path, cloud, pinentry, no_disk):
     if not os.path.exists(CONFIG['path']):
         os.makedirs(CONFIG['path'])
     if len(os.listdir(CONFIG['path'])) != 0:
-        handle_exception(CONFIG['path'] + ' is not empty, not initialized', 1)
+        handle_exception('INIT_ERROR')
     if cloud == 'git':
         CONFIG['useGit'] = True
         subprocess.call('git init', cwd=CONFIG['path'], shell=True)
-    pwd = password.PasswordStore()
-    get_client()
-    try:
-        keys = trezor.getTrezorKeys(client)
-        CONFIG['fileName'] = keys[0]
-    except Exception as ex:
-        handle_exception('Error while getting keys from device', 2, ex)
-    PWD_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
+    (pwd, CONFIG['fileName']) = password.PasswordStore.fromInit()
     write_config()
     load_config()
     save_storage()
@@ -480,17 +393,13 @@ def show(entry_names, secrets, json):
         if json:
             click.echo(e)
         else:
-            ts = {}
-            for i in entry['tags']:
-                ts[i] = pwd.tags.get(str(i))
-
             click.echo('-------------------'+ click.style(' (' + entry_id + ')', bold=True, fg='magenta') + '\n' +
                 click.style('item/url*: ', bold=True) + entry['note'] + '\n' +
                 click.style('title:     ', bold=True) + entry['title'] + '\n' +
                 click.style('username:  ', bold=True) + entry['username'] + '\n' +
                 click.style('password:  ', bold=True) + password + '\n' +
                 click.style('secret:    ', bold=True) + safeNote  + '\n' +
-                click.style('tags:      ', bold=True) + pwd.tags_to_string(ts))
+                click.style('tags:      ', bold=True) + pwd.tags_to_string(pwd.get_tags_from_entry(e), False, CONFIG['showIcons']))
     clean_exit()
 
 @cli.command()
@@ -678,7 +587,7 @@ def export_command(tag_name, entry_name, path, file_format):
     with click.progressbar(pwd.entries.items(), label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:
         for e in bar:
             e = pwd.unlock_entry(e)
-            export_passwords.update( {str(e[0]) : {'item/url*':e[1]['note'], 'username':e[1]['username'], 'password':e[1]['password']['data'], 'secret':e[1]['safe_note']['data']}} )
+            export_passwords.update( {str(e[0]) : {'item/url*':e[1]['note'], 'title':e[1]['title'], 'username':e[1]['username'], 'password':e[1]['password']['data'], 'secret':e[1]['safe_note']['data']}, 'tags':pwd.tags_to_string(pwd.get_tags_from_entry(e))} )
     if file_format == 'json':
         with open(os.path.join(CONFIG_PATH, 'export.json'), 'w', encoding='utf8') as f:
             json.dump(export_passwords, f)
@@ -686,7 +595,7 @@ def export_command(tag_name, entry_name, path, file_format):
         return
     clean_exit()
 
-@cli.command(name='import')# TODO CSV; check for file extension
+@cli.command(name='import')# TODO CSV; check for file extension before parsing
 @click.argument('path-to-file', type=click.Path(), nargs=1)
 def import_command(path_to_file):
     '''Import password store'''
@@ -706,20 +615,87 @@ def import_command(path_to_file):
             if v['item/url*'] == '':
                 handle_exception('ITEM_FIELD_ERROR')
             e = ('',{'title': v['item/url*'], 'username': v['username'], 'password': {'type': 'String', 'data': v['password']}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': v['secret']}, 'note': v['item/url*'], 'success': True, 'export': True})
-            e = pwd.lock_entry(e)
             pwd.insert_entry(e)
     save_storage()
     clean_exit()
 
-ALIASES = {
-    'cp': clip,
-    'copy': clip,
-    'conf': config,
-    'search': find,
-    'ins': insert,
-    'ls': list_command,
-    'del': remove,
-    'delete': remove,
-    'rm': remove,
-    'cat': show,
-}
+ALIASES = {'cp': clip, 'copy': clip, 'conf': config, 'search': find, 'ins': insert, 'ls': list_command, 'del': remove, 'delete': remove, 'rm': remove, 'cat': show,}
+
+ERROR_CODES = {
+    'CONFIG_READ_ERROR':{
+        'message':'Config read error: ' + CONFIG_PATH,
+        'code':1
+        },
+    'CONFIG_PARSE_ERROR':{
+        'message':'Config parse error: ' + CONFIG_PATH,
+        'code':2
+        },
+    'CONFIG_WRITE_ERROR':{
+        'message':'Config write error: ' + CONFIG_PATH,
+        'code':3
+        },
+    'NOT_INITIALIZED':{
+        'message':'Password store is not initialized',
+        'code':4
+        },
+    'PASSWORD_UNLOCK_READ_ERROR':{
+        'message':'Password store unlocking error',
+        'code':5
+        },
+    'LOCKFILE_DELETED':{
+        'message':'Lockfile deleted, aborted',
+        'code':6
+        },
+    'LOCKFILE_CHANGED':{
+        'message':'Lockfile changed, aborted',
+        'code':7
+        },
+    'PASSWORD_FILE_CHANGED':{
+        'message':'Password file changed, aborted',
+        'code':8
+        },
+    'DICEWARE_FILE_PARSE_ERROR':{
+        'message':'Wordlist parse error: ' + DICEWARE_FILE,
+        'code':9
+        },
+    'TREZOR_DEVICE_ERROR':{
+        'message':'Error while accessing trezor device',
+        'code':10
+        },
+    'TREZOR_KEY_ERROR':{
+        'message':'Error while getting keys from trezor device',
+        'code':11
+        },
+    'EDIT_ERROR':{
+        'message':'Edit gone wrong',
+        'code':11
+        },
+    'ITEM_FIELD_ERROR':{
+        'message':'item/url* field is mandatory',
+        'code':12
+        },
+    'WRONG_TAG_ERROR':{
+        'message':'Tag not exist: ',
+        'code':13
+        },
+    'TITLE_FIELD_ERROR':{
+        'message':'Title* field is mandatory',
+        'code':14
+        },
+    'WRONG_ICON_ERROR':{
+        'message':'Icon not exists: ',
+        'code':15
+        },
+    'ABORTED':{
+        'message':'Aborted',
+        'code':15
+        },
+    'IMPORT_ERROR':{
+        'message':'Import gone wrong',
+        'code':16
+        },
+    'INIT_ERROR':{
+        'message':'Directory not empty, not initialized',
+        'code':17
+        }
+    }

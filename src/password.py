@@ -33,6 +33,12 @@ class PasswordStore(object):
         if 'entries' not in db_json or 'tags' not in db_json:
             raise ValueError('Parse error while loading password file')
         return cls(db_json['entries'], db_json['tags'])
+    
+    @classmethod
+    def fromInit(cls, filepath):
+        get_client()
+        keys = trezor.getTrezorKeys(client)
+        return cls(db_json['entries'], db_json['tags']), keys[0]
 
     def get_encrypted_db(self, filepath):
         get_client()
@@ -58,6 +64,12 @@ class PasswordStore(object):
                 return k, v
         logging.info(tag_name + ' is not a tag in the password store')
         return None
+    
+    def get_tags_from_entry(self, e):
+        ts = {}
+        for i in e[1]['tags']:
+            ts[i] = tags.get(str(i))
+        return ts
 
     def get_entries_by_tag(self, tag_id):#TODO optimze
         es = {}
@@ -125,8 +137,8 @@ class PasswordStore(object):
         entry['nonce'] = trezor.getEncryptedNonce(client, entry)
         plain_nonce = trezor.getDecryptedNonce(client, entry)
         iv_pwd = trezor.getEntropy(client, 12)
-        iv_secret = trezor.getEntropy(client, 12)
         entry['password']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']), iv_pwd)
+        iv_secret = trezor.getEntropy(client, 12)
         entry['safe_note']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']), iv_secret)
         entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
         entry['success'] = True
@@ -134,6 +146,8 @@ class PasswordStore(object):
 
     def insert_entry(self, e):
         entry_id = e[0]; entry = e[1]
+        if entry['export'] is True:
+            self.lock_entry(e)
         if entry['success'] is False or entry['export'] is True:
             raise ValueError('Error while inserting entry', 19)
         if entry_id == '':
