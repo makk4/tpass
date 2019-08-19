@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import hashlib
 import hmac
+import logging
 import os
 import random
 import sys
@@ -15,21 +16,17 @@ from urllib.parse import urlparse
 
 BIP32_PATH = parse_path("10016h/0")
 
-def askForPassword():
-    return
-
 # @author:satoshilabs
-def wait_for_devices():
+def waitForDevices():
     devices = enumerate_devices()
     while not len(devices):
         sys.stderr.write("Please connect Trezor to computer and press Enter...")
         input()
         devices = enumerate_devices()
-
     return devices
 
 # @author:satoshilabs
-def choose_device(devices):
+def chooseDevice(devices):
     if not len(devices):
         raise RuntimeError("No Trezor connected!")
 
@@ -147,6 +144,6 @@ def getTrezorKeys(client):
     return getFileEncKey(masterKey)
 
 def getTrezorClient():
-    devices = wait_for_devices()
-    transport = choose_device(devices)
+    devices = waitForDevices()
+    transport = chooseDevice(devices)
     return TrezorClient(transport=transport, ui=ui.ClickUI())

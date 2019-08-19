@@ -33,6 +33,76 @@ CLIPBOARD_CLEAR_TIME = 15
 CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True, 'showIcons': False}
 PWD_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
 TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
+ERROR_CODES = {
+    'CONFIG_READ_ERROR':{
+        'message':'Config read error: ' + CONFIG_PATH,
+        'code':1
+        },
+    'CONFIG_PARSE_ERROR':{
+        'message':'Config parse error: ' + CONFIG_PATH,
+        'code':2
+        },
+    'CONFIG_WRITE_ERROR':{
+        'message':'Config write error: ' + CONFIG_PATH,
+        'code':3
+        },
+    'NOT_INITIALIZED':{
+        'message':'Password store is not initialized',
+        'code':4
+        },
+    'PASSWORD_UNLOCK_READ_ERROR':{
+        'message':'Password store unlocking error',
+        'code':5
+        },
+    'LOCKFILE_DELETED':{
+        'message':'Lockfile deleted, aborted',
+        'code':6
+        },
+    'LOCKFILE_CHANGED':{
+        'message':'Lockfile changed, aborted',
+        'code':7
+        },
+    'PASSWORD_FILE_CHANGED':{
+        'message':'Password file changed, aborted',
+        'code':8
+        },
+    'DICEWARE_FILE_PARSE_ERROR':{
+        'message':'Wordlist parse error: ' + DICEWARE_FILE,
+        'code':9
+        },
+    'TREZOR_DEVICE_ERROR':{
+        'message':'Error while accessing trezor device',
+        'code':10
+        },
+    'EDIT_ERROR':{
+        'message':'Edit gone wrong',
+        'code':11
+        },
+    'ITEM_FIELD_ERROR':{
+        'message':'item/url* field is mandatory',
+        'code':12
+        },
+    'WRONG_TAG_ERROR':{
+        'message':'Tag not exist: ',
+        'code':13
+        },
+    'TITLE_FIELD_ERROR':{
+        'message':'Title* field is mandatory',
+        'code':14
+        },
+    'WRONG_ICON_ERROR':{
+        'message':'Icon not exists: ',
+        'code':15
+        },
+    'ABORTED':{
+        'message':'Aborted',
+        'code':15
+        },
+    'IMPORT_ERROR':{
+        'message':'Import gone wrong',
+        'code':16
+        },
+    }
 TAG_NEW = ('',{'title': '', 'icon': 'home'})
 ENTRY_NEW = ('',{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True})
 client = None
@@ -46,10 +116,13 @@ def load_config():
     global CONFIG; global TMP_FILE; global PWD_FILE
     if not os.path.isfile(CONFIG_FILE):
         write_config()
-    with open(CONFIG_FILE) as f:
-        CONFIG = json.load(f)
+    try:
+        with open(CONFIG_FILE) as f:
+            CONFIG = json.load(f)
+    except Exception as ex:
+        handle_exception('CONFIG_READ_ERROR')
     if 'fileName' not in CONFIG or 'path' not in CONFIG or 'storeMetaDataOnDisk' not in CONFIG:
-        handle_exception('Config parse error: ' + CONFIG_PATH, 6)
+        handle_exception('CONFIG_PARSE_ERROR')
     PWD_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
     if CONFIG['storeMetaDataOnDisk'] is True:
         TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
@@ -58,23 +131,29 @@ def load_config():
             logging.warning('/dev/shm not found on host, using not as secure /tmp for metadata')
 
 def write_config():
-    if not os.path.exists(CONFIG_PATH):    
+    if not os.path.exists(CONFIG_PATH):
         os.mkdir(CONFIG_PATH)
-    with open(CONFIG_FILE, 'w', encoding='utf8') as f:
-        json.dump(CONFIG, f, indent=4)
+    try:
+        with open(CONFIG_FILE, 'w', encoding='utf8') as f:
+            json.dump(CONFIG, f, indent=4)
+    except Exception as ex:
+        handle_exception('CONFIG_WRITE_ERROR', ex)
  
 def unlock_storage():
     global LOCK; global pwd
     if os.path.isfile(LOCK_FILE):
         sys.exit('Error: password store is locked by another instance, remove lockfile to proceed: ' + LOCK_FILE)
     if CONFIG['fileName'] == '' or not os.path.isfile(PWD_FILE):
-        handle_exception('Password store is not initialized', 7)
+        handle_exception('NOT_INITIALIZED')
 
     tmp_need_update = False
     if CONFIG['storeMetaDataOnDisk'] is True:
         tmp_need_update = not os.path.isfile(TMP_FILE) or (os.path.isfile(TMP_FILE) and (os.path.getmtime(TMP_FILE) < os.path.getmtime(PWD_FILE)))
     if CONFIG['storeMetaDataOnDisk'] is False or tmp_need_update:
-        pwd = password.PasswordStore.fromFile(PWD_FILE)
+        try:
+            pwd = password.PasswordStore.fromFile(PWD_FILE)
+        except:
+            handle_exception('PASSWORD_UNLOCK_READ_ERROR')
         if CONFIG['storeMetaDataOnDisk'] is True:
             with open(TMP_FILE, 'w') as f:
                 json.dump(pwd.db_json, f)
@@ -91,13 +170,13 @@ def unlock_storage():
 def save_storage():
     global CONFIG
     if not os.path.isfile(LOCK_FILE):
-        handle_exception('Lockfile deleted, aborting', 9)
+        handle_exception('LOCKFILE_DELETED')
     with open(LOCK_FILE) as f:
         LOCK = json.load(f)
     if LOCK['uuid'] != UUID:
-        handle_exception('Lockfile changed, aborting', 10)
+        handle_exception('LOCKFILE_CHANGED')
     if not os.path.isfile(PWD_FILE) or os.path.getmtime(PWD_FILE) != LOCK['pwd_last_change_time']:
-        handle_exception('Password file changed, aborting', 11)
+        handle_exception('PASSWORD_FILE_CHANGED')
     pwd.get_encrypted_db(PWD_FILE)
     if CONFIG['storeMetaDataOnDisk'] is True:
         with open(TMP_FILE, 'w') as f:
@@ -118,7 +197,7 @@ def load_wordlist():
                     if(not key in words):
                         words[key] = value
     except Exception as ex:
-        handle_exception('Error while processing wordlist.txt file', 14, ex)
+        handle_exception('DICEWARE_FILE_PARSE_ERROR')
     return words
 
 def clear_clipboard():
@@ -133,7 +212,7 @@ def get_client():
         try:
             client = trezor.getTrezorClient()
         except Exception as ex:
-            handle_exception('Error while accessing trezor device', 2, ex)
+            handle_exception('TREZOR_DEVICE_ERROR')
     return client
 
 def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
@@ -141,7 +220,7 @@ def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
     if entry['export'] is False:
         e = unlock_entry(e)
     if entry['success'] is False:
-        handle_exception('Error while editing entry', 20)
+        handle_exception('EDIT_ERROR')
     entry['success'] = False
     edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data'], 'tags': {"inUse":entry['tags'], "chooseFrom": tags_to_string(tags, True, False)}}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
@@ -149,51 +228,51 @@ def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
         try:
             edit_json = json.loads(edit_json)
         except Exception as ex:
-            handle_exception('Edit gone wrong', 21, ex)
+            handle_exception('EDIT_ERROR')
         if 'title' not in edit_json or 'item/url*' not in edit_json or 'username' not in edit_json or 'password' not in edit_json or 'secret' not in edit_json or 'tags' not in edit_json or 'inUse' not in edit_json['tags']:
-            handle_exception('Edit gone wrong', 22)
+            handle_exception('EDIT_ERROR')
         if not isinstance(edit_json['item/url*'],str) or not isinstance(edit_json['title'],str) or not isinstance(edit_json['username'],str) or not isinstance(edit_json['password'],str) or not isinstance(edit_json['secret'],str):
-            handle_exception('Edit gone wrong', 23)
+            handle_exception('EDIT_ERROR')
         if edit_json['item/url*'] == '':
-            handle_exception('item/url* field is mandatory', 24)
+            handle_exception('ITEM_FIELD_ERROR')
         entry['note'] = edit_json['item/url*']; entry['title'] = edit_json['title']; entry['username'] = edit_json['username']; entry['password']['data'] = edit_json['password']; entry['safe_note']['data'] = edit_json['secret']
         for i in edit_json['tags']['inUse']:
             if str(i) not in tags:
-                handle_exception('Tag not exist: ' + str(i), 25)
+                handle_exception('WRONG_TAG_ERROR')
         if 0 in edit_json['tags']['inUse']:
             edit_json['tags']['inUse'].remove(0)
         entry['tags'] = edit_json['tags']['inUse']
         entry['success'] = True
         return lock_entry(e)
-    handle_exception('Aborted!', 0)
+    handle_exception('ABORTED')
 
 def edit_tag(t):
     tag_id = t[0]; tag = t[1]
     if tag_id == '0':
         handle_exception('All not editable', 28)
-    edit_json = {'title': tag['title'], 'icon': {"inUse":tag['icon'], 'chooseFrom:':', '.join(password.ICONS)}}
+    edit_json = {'title*': tag['title'], 'icon': {"inUse":tag['icon'], 'chooseFrom:':', '.join(password.ICONS)}}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
     if edit_json:
         try:
             edit_json = json.loads(edit_json)
         except Exception as ex:
-            handle_exception('Edit gone wrong', 26, ex)
-        if 'title' not in edit_json or edit_json['title'] == '' or not isinstance(edit_json['title'],str):
-            handle_exception('Title field is mandatory', 27)
+            handle_exception('EDIT_ERROR')
+        if 'title*' not in edit_json or edit_json['title*'] == '' or not isinstance(edit_json['title*'],str):
+            handle_exception('TITLE_FIELD_ERROR')
         if 'icon' not in edit_json or 'inUse' not in edit_json['icon'] or edit_json['icon']['inUse'] not in password.ICONS or not isinstance(edit_json['icon']['inUse'],str):
-            handle_exception('Icon not exists: ' + edit_json['icon']['inUse'], 28)
-        tag['title'] = edit_json['title']; tag['icon'] = edit_json['icon']['inUse'] 
+            handle_exception('WRONG_ICON_ERROR')
+        tag['title'] = edit_json['title*']; tag['icon'] = edit_json['icon']['inUse'] 
         return t
-    handle_exception('Aborted!', 0)
+    handle_exception('ABORTED')
 
-def handle_exception(message, code=None, ex=None):
-    logging.error(message)
+def handle_exception(error, ex=None):
+    logging.error(ERROR_CODES[error]['message'])
     if ex is not None:
         logging.debug(ex)
-    clean_exit(1)
+    clean_exit(ERROR_CODES[error]['code'])
 
 def clean_exit(exit_code=0):
-    if os.path.isfile(LOCK_FILE):#TODO only delete own lockfile
+    if os.path.isfile(LOCK_FILE):
         os.remove(LOCK_FILE)
     sys.exit(exit_code)
 
@@ -373,6 +452,8 @@ def list_command(tag_name):
         pwd.print_tags(pwd.tags, CONFIG['showIcons'], True)
     else:
         t = pwd.get_tag(tag_name)
+        if t is None:
+            clean_exit()
         pwd.print_tags({t[0] : t[1]}, CONFIG['showIcons'], True)
     clean_exit()
     
@@ -385,6 +466,8 @@ def show(entry_names, secrets, json):
     unlock_storage()
     for name in entry_names:
         e = pwd.get_entry(name)
+        if e is None:
+            continue
         entry = e[1]; entry_id = e[0]
 
         if not secrets:
@@ -401,7 +484,7 @@ def show(entry_names, secrets, json):
             for i in entry['tags']:
                 ts[i] = pwd.tags.get(str(i))
 
-            click.echo(click.style('#' + entry_id, bold=True, fg='magenta') + '\n' +
+            click.echo('-------------------'+ click.style(' (' + entry_id + ')', bold=True, fg='magenta') + '\n' +
                 click.style('item/url*: ', bold=True) + entry['note'] + '\n' +
                 click.style('title:     ', bold=True) + entry['title'] + '\n' +
                 click.style('username:  ', bold=True) + entry['username'] + '\n' +
@@ -419,6 +502,8 @@ def clip(user, url, secret, entry_name):
     '''Decrypt and copy line of entry to clipboard'''
     unlock_storage()
     e = pwd.get_entry(entry_name)
+    if e is None:
+        clean_exit()
     entry = e[1]; entry_id = e[0]
     if user:
         pyperclip.copy(entry['username'])
@@ -445,7 +530,7 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
     global db_json
     if (length < 6 and type_ is 'password') or (length < 3 and type_ is 'wordlist') or (length < 4 and type_ is 'pin'):
         if not click.confirm('Warning: ' + length + ' is too short for password with type ' + type_ + '. Continue?'):
-            handle_exception('Aborted', 0)
+            handle_exception('ABORTED')
     if type_ == 'wordlist':
         words = load_wordlist()
         password = crypto.generatePassphrase(length, words, seperator)
@@ -456,6 +541,8 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
     if insert:
         unlock_storage()
         e = pwd.get_entry(insert)
+        if e is None:
+            clean_exit()
         e = pwd.unlock_entry(e)
         e[1]['password']['data'] = password
         e = edit_entry(e)
@@ -480,6 +567,8 @@ def remove(entry_names, tag, recursive, force):# TODO make options TRU/FALSE tag
     global db_json
     if tag:
         t = pwd.get_tag(tag)
+        if t is None:
+            clean_exit()
         pwd.remove_tag(t, recursive)
         if force or click.confirm('Delete tag: ' + click.style(t[1]['title'], bold=True)):
             save_storage()
@@ -487,6 +576,8 @@ def remove(entry_names, tag, recursive, force):# TODO make options TRU/FALSE tag
         names = []
         for name in entry_names:
             entry_id = pwd.get_entry(name)[0]
+            if e is None:
+                clean_exit()
             names.append(pwd.entries[entry_id]['title'])
             del pwd.db_json['entries'][entry_id]
         if force or click.confirm('Delete entries ' + click.style(', '.join(names), bold=True)):
@@ -516,11 +607,15 @@ def edit(entry_name, tag):#TODO option --entry/--tag with default
     unlock_storage()
     if tag:
         t = pwd.get_tag(tag)
+        if t is None:
+            clean_exit()
         t = edit_tag(t)
         pwd.insert_tag(t)
         save_storage()
     else:
         e = pwd.get_entry(entry_name)
+        if e is None:
+            clean_exit()
         e = edit_entry(e)
         pwd.insert_entry(e)
         save_storage()
@@ -605,11 +700,11 @@ def import_command(path_to_file):
     with click.progressbar(es.items(), label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:    
         for k,v in bar:
             if 'item/url*' not in v or 'username' not in v or 'password' not in v or 'secret' not in v:
-                handle_exception('Import gone wrong', 5)
+                handle_exception('IMPORT_ERROR')
             if not isinstance(v['item/url*'],str) or not isinstance(v['username'],str) or not isinstance(v['password'],str) or not isinstance(v['secret'],str):
-                handle_exception('Import gone wrong', 5)
+                handle_exception('IMPORT_ERROR')
             if v['item/url*'] == '':
-                handle_exception('item/url* field is mandatory', 6)
+                handle_exception('ITEM_FIELD_ERROR')
             e = ('',{'title': v['item/url*'], 'username': v['username'], 'password': {'type': 'String', 'data': v['password']}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': v['secret']}, 'note': v['item/url*'], 'success': True, 'export': True})
             e = pwd.lock_entry(e)
             pwd.insert_entry(e)

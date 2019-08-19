@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import logging
 import random
 import secrets
 import string
@@ -80,13 +81,10 @@ def generatePassword(length):
 
 def generatePassphrase(length, words, seperator):
     winners = []
-    if entropy is None:
-        for i in range(0, int(length)):
-            choose = (secrets.randbelow(6) + 1) + 10 * (secrets.randbelow(6) + 1) + 100 * (secrets.randbelow(6) + 1) + 1000 * (secrets.randbelow(6) + 1) + 10000 * (secrets.randbelow(6) + 1)
-            winners.append(words[str(choose)])
-        return seperator.join(winners) 
-    else:
-        return entropy
+    for i in range(0, int(length)):
+        choose = (secrets.randbelow(6) + 1) + 10 * (secrets.randbelow(6) + 1) + 100 * (secrets.randbelow(6) + 1) + 1000 * (secrets.randbelow(6) + 1) + 10000 * (secrets.randbelow(6) + 1)
+        winners.append(words[str(choose)])
+    return seperator.join(winners)
 
 def generatePin(length):
     pin = ''

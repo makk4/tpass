@@ -1,4 +1,9 @@
 import click
+import logging
+try:
+    import simplejson as json
+except:
+    import json
 from src import trezor
 from src import crypto
 
@@ -102,47 +107,35 @@ class PasswordStore(object):
         get_client()
         entry_id = e[0]; entry = e[1]
         if entry['success'] is False or entry['export'] is True:
-            handle_exception('Error while unlocking entry', 15)
-        entry['success'] = False; entry['export'] = True
-        try:   
-            plain_nonce = trezor.getDecryptedNonce(client, entry)
-        except Exception as ex:
-            handle_exception('Error while accessing trezor device', 2, ex)    
-        try:
-            entry['password']['data'] = crypto.decryptEntryValue(plain_nonce, entry['password']['data'])
-            entry['safe_note']['data'] = crypto.decryptEntryValue(plain_nonce, entry['safe_note']['data'])
-            entry['password']['type'] = 'String'; entry['safe_note']['type'] = 'String'
-            entry['success'] = True
-        except Exception as ex:
-            handle_exception('Error while decrypting entry', 16, ex)
+            raise ValueError('Error while unlocking entry', 15)
+        entry['success'] = False; entry['export'] = True 
+        plain_nonce = trezor.getDecryptedNonce(client, entry)
+        entry['password']['data'] = crypto.decryptEntryValue(plain_nonce, entry['password']['data'])
+        entry['safe_note']['data'] = crypto.decryptEntryValue(plain_nonce, entry['safe_note']['data'])
+        entry['password']['type'] = 'String'; entry['safe_note']['type'] = 'String'
+        entry['success'] = True
         return e
 
     def lock_entry(self, e):
         get_client()
         entry_id = e[0]; entry = e[1]
         if entry['success'] is False or entry['export'] is False:
-            handle_exception('Error while locking entry', 17)
+            raise ValueError('Error while locking entry')
         entry['success'] = False; entry['export'] = False
-        try:
-            entry['nonce'] = trezor.getEncryptedNonce(client, entry)
-            plain_nonce = trezor.getDecryptedNonce(client, entry)
-            iv_pwd = trezor.getEntropy(client, 12)
-            iv_secret = trezor.getEntropy(client, 12)
-        except Exception as ex:
-            handle_exception('Error while accessing trezor device', 2, ex)
-        try:
-            entry['password']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']), iv_pwd)
-            entry['safe_note']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']), iv_secret)
-            entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
-            entry['success'] = True
-        except Exception as ex:
-            handle_exception('Error while encrypting entry', 18, ex)
+        entry['nonce'] = trezor.getEncryptedNonce(client, entry)
+        plain_nonce = trezor.getDecryptedNonce(client, entry)
+        iv_pwd = trezor.getEntropy(client, 12)
+        iv_secret = trezor.getEntropy(client, 12)
+        entry['password']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']), iv_pwd)
+        entry['safe_note']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']), iv_secret)
+        entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
+        entry['success'] = True
         return e
 
     def insert_entry(self, e):
         entry_id = e[0]; entry = e[1]
         if entry['success'] is False or entry['export'] is True:
-            handle_exception('Error while inserting entry', 19)
+            raise ValueError('Error while inserting entry', 19)
         if entry_id == '':
             for k in self.entries.keys():
                 entry_id = str(int(k) + 1)
@@ -150,7 +143,7 @@ class PasswordStore(object):
                 entry_id = '0'
         self.entries.update( {entry_id : entry} )
 
-    def insert_tag(t):
+    def insert_tag(self, t):
         tag_id = t[0]; tag = t[1]
         if tag_id == '':
             for k in self.tags.keys():
@@ -159,10 +152,11 @@ class PasswordStore(object):
                 tag_id = '0'
         self.tags.update( {tag_id : tag} )
 
-    def remove_tag(t, recursiv=False):
+    def remove_tag(self, t, recursive=False):
         tag_id = t[0]; tag = t[1]
         if tag_id == '0':
-            handle_exception('Cannot remove <all> tag', 0)
+            logging.info('Cannot remove <all> tag')
+            return
         del self.db_json['tags'][tag_id]
         es = get_entries_by_tag(tag_id)
         for e in es:
@@ -171,5 +165,5 @@ class PasswordStore(object):
             else:   
                 self.entries[e]['tags'].remove(int(tag_id))
     
-    def remove_entrie(e):
-        del self.db_json['entries'][tag_id]
+    def remove_entrie(self, e):
+        del self.db_json['entries'][e[0]]
