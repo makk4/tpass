@@ -18,45 +18,50 @@ from src import trezor
 from src import crypto
 from src import password
 
+'''
+Config variables
+'''
+DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
-DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
 CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
 CONFIG_FILE = os.path.join(CONFIG_PATH, 'config.json')
+TMP_PATH = os.path.join('/', 'dev', 'shm')
 LOG_FILE = os.path.join(CONFIG_PATH, 'tpass.log')
 LOCK_FILE = os.path.join(CONFIG_PATH, 'tpass.lock')
-UUID = uuid.uuid4().int
-LOCK = {'uuid':UUID, 'pwd_last_change_time':''} # TODO make empty file:: get timestamp of lockfile instead of uuid; write pwd_last_change_time in var instead LOCK --> spead up start
-DICEWARE_FILE = os.path.join(CONFIG_PATH, 'wordlist.txt')
-DEV_SHM = os.path.join('/', 'dev', 'shm')
+WORDLIST_FILE = os.path.join(CONFIG_PATH, 'wordlist.txt')
+LOCK = {'uuid':uuid.uuid4().int, 'pwd_last_change_time':''}
 CLIPBOARD_CLEAR_TIME = 15
 CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'pinentry': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True, 'showIcons': False}
-PWD_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
-TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
-TAG_NEW = ('',{'title': '', 'icon': 'home'})
-ENTRY_NEW = ('',{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True})
+
+'''
+Instance variables
+'''
+pwd_file = None
+tmp_file = None
 pwd = None
+
 
 '''
 Core Methods
 '''
 
 def load_config():
-    global CONFIG; global TMP_FILE; global PWD_FILE
+    global CONFIG; global tmp_file; global pwd_file
     if not os.path.isfile(CONFIG_FILE):
         write_config()
     try:
         with open(CONFIG_FILE) as f:
             CONFIG = json.load(f)
     except Exception as ex:
-        handle_exception('CONFIG_READ_ERROR')
+        handle_exception('CONFIG_READ_ERROR', ex)
     if 'fileName' not in CONFIG or 'path' not in CONFIG or 'storeMetaDataOnDisk' not in CONFIG:
         handle_exception('CONFIG_PARSE_ERROR')
-    PWD_FILE = os.path.join(CONFIG['path'], CONFIG['fileName'])
+    pwd_file = os.path.join(CONFIG['path'], CONFIG['fileName'])
     if CONFIG['storeMetaDataOnDisk'] is True:
-        TMP_FILE = os.path.join(DEV_SHM, CONFIG['fileName'] + '.json')
-        if not os.path.exists(DEV_SHM):
-            TMP_FILE = os.path.join(tempfile.gettempdir(), CONFIG['fileName'] + '.json')
+        tmp_file = os.path.join(TMP_PATH, CONFIG['fileName'] + '.json')
+        if not os.path.exists(TMP_PATH):
+            tmp_file = os.path.join(tempfile.gettempdir(), CONFIG['fileName'] + '.json')
             logging.warning('/dev/shm not found on host, using not as secure /tmp for metadata')
 
 def write_config():
@@ -72,27 +77,27 @@ def unlock_storage():
     global LOCK; global pwd
     if os.path.isfile(LOCK_FILE):
         sys.exit('Error: password store is locked by another instance, remove lockfile to proceed: ' + LOCK_FILE)
-    if CONFIG['fileName'] == '' or not os.path.isfile(PWD_FILE):
+    if CONFIG['fileName'] == '' or not os.path.isfile(pwd_file):
         handle_exception('NOT_INITIALIZED')
 
     tmp_need_update = False
     if CONFIG['storeMetaDataOnDisk'] is True:
-        tmp_need_update = not os.path.isfile(TMP_FILE) or (os.path.isfile(TMP_FILE) and (os.path.getmtime(TMP_FILE) < os.path.getmtime(PWD_FILE)))
+        tmp_need_update = not os.path.isfile(tmp_file) or (os.path.isfile(tmp_file) and (os.path.getmtime(tmp_file) < os.path.getmtime(pwd_file)))
     if CONFIG['storeMetaDataOnDisk'] is False or tmp_need_update:
         try:
-            pwd = password.PasswordStore.fromFile(PWD_FILE)
-        except:
-            handle_exception('PASSWORD_UNLOCK_READ_ERROR')
+            pwd = password.PasswordStore.fromPwdFile(pwd_file)
+        except Exception as ex:
+            handle_exception('PASSWORD_UNLOCK_READ_ERROR', ex)
         if CONFIG['storeMetaDataOnDisk'] is True:
-            with open(TMP_FILE, 'w') as f:
+            with open(tmp_file, 'w') as f:
                 json.dump(pwd.db_json, f)
 
     if CONFIG['storeMetaDataOnDisk'] is True and not tmp_need_update:
-        with open(TMP_FILE) as f:
+        with open(tmp_file) as f:
             db_json = json.load(f)
         pwd = password.PasswordStore(db_json['entries'], db_json['tags'])
 
-    LOCK['pwd_last_change_time'] = os.path.getmtime(PWD_FILE)
+    LOCK['pwd_last_change_time'] = os.path.getmtime(pwd_file)
     with open(LOCK_FILE, 'w', encoding='utf8') as f:
         json.dump(LOCK, f, indent=4)
 
@@ -104,18 +109,18 @@ def save_storage():
         LOCK = json.load(f)
     if LOCK['uuid'] != UUID:
         handle_exception('LOCKFILE_CHANGED')
-    if not os.path.isfile(PWD_FILE) or os.path.getmtime(PWD_FILE) != LOCK['pwd_last_change_time']:
+    if not os.path.isfile(pwd_file) or os.path.getmtime(pwd_file) != LOCK['pwd_last_change_time']:
         handle_exception('PASSWORD_FILE_CHANGED')
-    pwd.get_encrypted_db(PWD_FILE)
+    pwd.write_pwd_file(pwd_file)
     if CONFIG['storeMetaDataOnDisk'] is True:
-        with open(TMP_FILE, 'w') as f:
+        with open(tmp_file, 'w') as f:
             json.dump(pwd.db_json, f) 
     if CONFIG['useGit'] is True:
         subprocess.call('git commit -m "update db"', cwd=CONFIG['path'], shell=True)
 
 def load_wordlist():
-    wordlist = DICEWARE_FILE
-    if not os.path.isfile(DICEWARE_FILE):
+    wordlist = WORDLIST_FILE
+    if not os.path.isfile(WORDLIST_FILE):
         wordlist = os.path.join('wordlist.txt')
     words = {}
     try:
@@ -126,7 +131,7 @@ def load_wordlist():
                     if(not key in words):
                         words[key] = value
     except Exception as ex:
-        handle_exception('DICEWARE_FILE_PARSE_ERROR')
+        handle_exception('DICEWARE_FILE_PARSE_ERROR', ex)
     return words
 
 def clear_clipboard():
@@ -148,7 +153,7 @@ def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
         try:
             edit_json = json.loads(edit_json)
         except Exception as ex:
-            handle_exception('EDIT_ERROR')
+            handle_exception('EDIT_ERROR', ex)
         if 'title' not in edit_json or 'item/url*' not in edit_json or 'username' not in edit_json or 'password' not in edit_json or 'secret' not in edit_json or 'tags' not in edit_json or 'inUse' not in edit_json['tags']:
             handle_exception('EDIT_ERROR')
         if not isinstance(edit_json['item/url*'],str) or not isinstance(edit_json['title'],str) or not isinstance(edit_json['username'],str) or not isinstance(edit_json['password'],str) or not isinstance(edit_json['secret'],str):
@@ -176,7 +181,7 @@ def edit_tag(t):
         try:
             edit_json = json.loads(edit_json)
         except Exception as ex:
-            handle_exception('EDIT_ERROR')
+            handle_exception('EDIT_ERROR', ex)
         if 'title*' not in edit_json or edit_json['title*'] == '' or not isinstance(edit_json['title*'],str):
             handle_exception('TITLE_FIELD_ERROR')
         if 'icon' not in edit_json or 'inUse' not in edit_json['icon'] or edit_json['icon']['inUse'] not in password.ICONS or not isinstance(edit_json['icon']['inUse'],str):
@@ -184,6 +189,18 @@ def edit_tag(t):
         tag['title'] = edit_json['title*']; tag['icon'] = edit_json['icon']['inUse'] 
         return t
     handle_exception('ABORTED')
+
+def start_logging(debug):
+    logging.basicConfig(level=logging.DEBUG, filename=LOG_FILE, filemode='w', format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M')
+    console = logging.StreamHandler()
+    if debug:
+        console.setLevel(logging.DEBUG)
+    else:
+        console.setLevel(logging.WARNING)
+    formatter = logging.Formatter('%(levelname)s: %(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
+    logging.info('tpass started')
 
 def handle_exception(error, ex=None):
     logging.error(ERROR_CODES[error]['message'])
@@ -196,8 +213,9 @@ def clean_exit(exit_code=0):
         os.remove(LOCK_FILE)
     sys.exit(exit_code)
 
+
 '''
-CLI Methods
+CLI Helper Methods
 '''
 
 def tab_completion_entries(ctx, args, incomplete):
@@ -260,6 +278,11 @@ class AliasedGroup(click.Group):
             pass
         return super().get_command(ctx, cmd_name)
 
+
+'''
+CLI Commands
+'''
+
 @click.group(cls=AliasedGroup, invoke_without_command=True)
 @click.option('--debug', is_flag=True, help='Show debug info')
 @click.version_option()
@@ -278,17 +301,7 @@ def cli(ctx, debug):
     https://github.com/makk4/tpass
     '''
     
-    logging.basicConfig(level=logging.DEBUG, filename=LOG_FILE, filemode='w', format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M')
-    console = logging.StreamHandler()
-    if debug:
-        console.setLevel(logging.DEBUG)
-    else:
-        console.setLevel(logging.WARNING)
-    formatter = logging.Formatter('%(levelname)s: %(message)s')
-    console.setFormatter(formatter)
-    logging.getLogger('').addHandler(console)
-    logging.info('tpass started')
-
+    start_logging(debug)
     load_config()
     if ctx.invoked_subcommand is None:
         ctx = list_command()
@@ -300,7 +313,7 @@ def cli(ctx, debug):
 @click.option('-d', '--no-disk', is_flag=True, help='do not store metadata on disk')
 def init(path, cloud, pinentry, no_disk):
     '''Initialize new password store'''
-    global CONFIG; global PWD_FILE; global TMP_FILE
+    global CONFIG; global pwd_file; global tmp_file
     CONFIG['path'] = path; CONFIG['storeMetaDataOnDisk'] = not no_disk; CONFIG['pinentry'] = pinentry
     if cloud == 'googledrive':
         CONFIG['path'] = GOOGLE_DRIVE_PATH
@@ -365,9 +378,8 @@ def list_command(tag_name):
         pwd.print_tags(pwd.tags, CONFIG['showIcons'], True)
     else:
         t = pwd.get_tag(tag_name)
-        if t is None:
-            clean_exit()
-        pwd.print_tags({t[0] : t[1]}, CONFIG['showIcons'], True)
+        if t is not None:
+            pwd.print_tags({t[0] : t[1]}, CONFIG['showIcons'], True)
     clean_exit()
     
 @cli.command()
@@ -476,7 +488,7 @@ def remove(entry_names, tag, recursive, force):# TODO make options TRU/FALSE tag
     global db_json
     if tag:
         t = pwd.get_tag(tag)
-        if t is None:
+        if t is not None:
             clean_exit()
         pwd.remove_tag(t, recursive)
         if force or click.confirm('Delete tag: ' + click.style(t[1]['title'], bold=True)):
@@ -499,11 +511,13 @@ def insert(tag):
     '''Insert entry or tag'''
     unlock_storage()
     if tag:
-        t = edit_tag(TAG_NEW)
+        t = ('',{'title': '', 'icon': 'home'})
+        t = edit_tag(t)
         pwd.insert_tag(t)
         save_storage()
     else:
-        e = edit_entry(ENTRY_NEW)
+        e = ('',{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True})
+        e = edit_entry(e)
         pwd.insert_entry(e)
         save_storage()
     clean_exit()
@@ -567,9 +581,9 @@ def unlock(force):
 @cli.command()
 def lock():
     '''Remove metadata from disk'''
-    if os.path.isfile(TMP_FILE):
-        os.remove(TMP_FILE)
-        click.echo(click.style('metadata deleted: ', bold=True) + TMP_FILE)
+    if os.path.isfile(tmp_file):
+        os.remove(tmp_file)
+        click.echo(click.style('metadata deleted: ', bold=True) + tmp_file)
     else:
         click.echo(click.style('nothing to delete', bold=True)) 
     clean_exit()
@@ -587,7 +601,7 @@ def export_command(tag_name, entry_name, path, file_format):
     with click.progressbar(pwd.entries.items(), label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:
         for e in bar:
             e = pwd.unlock_entry(e)
-            export_passwords.update( {str(e[0]) : {'item/url*':e[1]['note'], 'title':e[1]['title'], 'username':e[1]['username'], 'password':e[1]['password']['data'], 'secret':e[1]['safe_note']['data']}, 'tags':pwd.tags_to_string(pwd.get_tags_from_entry(e))} )
+            export_passwords.update( {str(e[0]) : {'item/url*':e[1]['note'], 'title':e[1]['title'], 'username':e[1]['username'], 'password':e[1]['password']['data'], 'secret':e[1]['safe_note']['data'], 'tags':pwd.tags_to_string(pwd.get_tags_from_entry(e))} } )
     if file_format == 'json':
         with open(os.path.join(CONFIG_PATH, 'export.json'), 'w', encoding='utf8') as f:
             json.dump(export_passwords, f)
@@ -605,7 +619,7 @@ def import_command(path_to_file):
             with open(path_to_file) as f:
                 es = json.load(f)
     except Exception as ex:
-        handle_exception('', 4, ex)
+        handle_exception('IMPORT_ERROR', ex)
     with click.progressbar(es.items(), label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:    
         for k,v in bar:
             if 'item/url*' not in v or 'username' not in v or 'password' not in v or 'secret' not in v:
@@ -614,10 +628,15 @@ def import_command(path_to_file):
                 handle_exception('IMPORT_ERROR')
             if v['item/url*'] == '':
                 handle_exception('ITEM_FIELD_ERROR')
-            e = ('',{'title': v['item/url*'], 'username': v['username'], 'password': {'type': 'String', 'data': v['password']}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': v['secret']}, 'note': v['item/url*'], 'success': True, 'export': True})
+            e = ('',{'title': v['title'], 'username': v['username'], 'password': {'type': 'String', 'data': v['password']}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': v['secret']}, 'note': v['item/url*'], 'success': True, 'export': True})
             pwd.insert_entry(e)
     save_storage()
     clean_exit()
+
+
+'''
+System Constants
+'''
 
 ALIASES = {'cp': clip, 'copy': clip, 'conf': config, 'search': find, 'ins': insert, 'ls': list_command, 'del': remove, 'delete': remove, 'rm': remove, 'cat': show,}
 
@@ -655,7 +674,7 @@ ERROR_CODES = {
         'code':8
         },
     'DICEWARE_FILE_PARSE_ERROR':{
-        'message':'Wordlist parse error: ' + DICEWARE_FILE,
+        'message':'Wordlist parse error: ' + WORDLIST_FILE,
         'code':9
         },
     'TREZOR_DEVICE_ERROR':{

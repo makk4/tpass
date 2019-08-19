@@ -1,5 +1,4 @@
 import click
-import logging
 try:
     import simplejson as json
 except:
@@ -26,7 +25,7 @@ class PasswordStore(object):
         self.db_json['entries'] = entries; self.db_json['tags'] = tags
 
     @classmethod
-    def fromFile(cls, filepath):
+    def fromPwdFile(cls, filepath):
         get_client()
         keys = trezor.getTrezorKeys(client)
         db_json = crypto.decryptStorage(filepath, keys[2])
@@ -40,7 +39,7 @@ class PasswordStore(object):
         keys = trezor.getTrezorKeys(client)
         return cls(db_json['entries'], db_json['tags']), keys[0]
 
-    def get_encrypted_db(self, filepath):
+    def write_pwd_file(self, filepath):
         get_client()
         keys = trezor.getTrezorKeys(client)
         encKey = keys[2]
@@ -55,14 +54,14 @@ class PasswordStore(object):
             if note == v['note']:
                 if username == '' or username == v['username']:
                     return k, v
-        logging.info(', '.join(names) + ' is not in the password store')
+        click.echo(' '.join(names) + 'not in the password store')
         return None
 
     def get_tag(self, tag_name):
         for k, v in self.tags.items():
             if tag_name == v['title']:
                 return k, v
-        logging.info(tag_name + ' is not a tag in the password store')
+        click.echo(tag_name + 'is not a tag in the password store')
         return None
     
     def get_tags_from_entry(self, e):
@@ -159,6 +158,8 @@ class PasswordStore(object):
 
     def insert_tag(self, t):
         tag_id = t[0]; tag = t[1]
+        if tag_id == '0'
+            return
         if tag_id == '':
             for k in self.tags.keys():
                 tag_id = str(int(k) + 1)
@@ -169,7 +170,7 @@ class PasswordStore(object):
     def remove_tag(self, t, recursive=False):
         tag_id = t[0]; tag = t[1]
         if tag_id == '0':
-            logging.info('Cannot remove <all> tag')
+            click.echo('Cannot remove <all> tag', err=True)
             return
         del self.db_json['tags'][tag_id]
         es = get_entries_by_tag(tag_id)

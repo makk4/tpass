@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import logging
 import random
 import secrets
 import string
