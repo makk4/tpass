@@ -16,7 +16,6 @@
 * Optimze
 ** TODO get cryptomodul correct and secure
 ** TODO insert entrie/tag with cli parameters
-** TODO put get_client in trezor.py logic make class?
 ** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
 ** TODO simplejson error checking
 ** DONE multiple entries at once on rm, show
