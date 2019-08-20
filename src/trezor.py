@@ -85,18 +85,17 @@ def getDecryptedNonce(client, entry):
     )
     return decrypted_nonce.hex()
 
-def getEncryptedNonce(client, entry):
+def getEncryptedNonce(client, entry, entropy):
     if 'item' in entry:
         item = entry['item']
     else:
         item = entry['title']
-
+        
     pr = urlparse(item)
     if pr.scheme and pr.netloc:
         item = pr.netloc
 
     ENC_KEY = 'Unlock %s for user %s?' % (item, entry['username'])
-    entropy = getEntropy(client, 32)
     ENC_VALUE = hashlib.sha256(entropy).digest()
     encrypted_nonce = misc.encrypt_keyvalue(
         client,

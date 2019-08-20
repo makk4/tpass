@@ -11,9 +11,9 @@ import unittest
 from src import main
 from src import trezor as trezorapi
 
+DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
-DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
 CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
 CONFIG_FILE = os.path.join(CONFIG_PATH, 'config.json')
 DICEWARE_FILE = os.path.join(CONFIG_PATH, 'wordlist.txt')

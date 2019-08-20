@@ -85,7 +85,7 @@ def unlock_storage():
         tmp_need_update = not os.path.isfile(tmp_file) or (os.path.isfile(tmp_file) and (os.path.getmtime(tmp_file) < os.path.getmtime(pwd_file)))
     if CONFIG['storeMetaDataOnDisk'] is False or tmp_need_update:
         try:
-            pwd = password.PasswordStore.fromPwdFile(pwd_file)
+            pwd = password.PasswordStore.fromPwdFile(CONFIG['path'])
         except Exception as ex:
             handle_exception('PASSWORD_UNLOCK_READ_ERROR', ex)
         if CONFIG['storeMetaDataOnDisk'] is True:
@@ -111,7 +111,7 @@ def save_storage():
         handle_exception('LOCKFILE_CHANGED')
     if not os.path.isfile(pwd_file) or os.path.getmtime(pwd_file) != LOCK['pwd_last_change_time']:
         handle_exception('PASSWORD_FILE_CHANGED')
-    pwd.write_pwd_file(pwd_file)
+    pwd.write_pwd_file(CONFIG['path'])
     if CONFIG['storeMetaDataOnDisk'] is True:
         with open(tmp_file, 'w') as f:
             json.dump(pwd.db_json, f) 
@@ -139,56 +139,6 @@ def clear_clipboard():
         for i in bar:
             time.sleep(1)
     pyperclip.copy('')
-
-def edit_entry(e):#TODO parse tags as string, not number; don't show <All>
-    entry = e[1]
-    if entry['export'] is False:
-        e = unlock_entry(e)
-    if entry['success'] is False:
-        handle_exception('EDIT_ERROR')
-    entry['success'] = False
-    edit_json = {'item/url*':entry['note'], 'title':entry['title'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data'], 'tags': {"inUse":entry['tags'], "chooseFrom": tags_to_string(tags, True, False)}}
-    edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
-    if edit_json:
-        try:
-            edit_json = json.loads(edit_json)
-        except Exception as ex:
-            handle_exception('EDIT_ERROR', ex)
-        if 'title' not in edit_json or 'item/url*' not in edit_json or 'username' not in edit_json or 'password' not in edit_json or 'secret' not in edit_json or 'tags' not in edit_json or 'inUse' not in edit_json['tags']:
-            handle_exception('EDIT_ERROR')
-        if not isinstance(edit_json['item/url*'],str) or not isinstance(edit_json['title'],str) or not isinstance(edit_json['username'],str) or not isinstance(edit_json['password'],str) or not isinstance(edit_json['secret'],str):
-            handle_exception('EDIT_ERROR')
-        if edit_json['item/url*'] == '':
-            handle_exception('ITEM_FIELD_ERROR')
-        entry['note'] = edit_json['item/url*']; entry['title'] = edit_json['title']; entry['username'] = edit_json['username']; entry['password']['data'] = edit_json['password']; entry['safe_note']['data'] = edit_json['secret']
-        for i in edit_json['tags']['inUse']:
-            if str(i) not in tags:
-                handle_exception('WRONG_TAG_ERROR')
-        if 0 in edit_json['tags']['inUse']:
-            edit_json['tags']['inUse'].remove(0)
-        entry['tags'] = edit_json['tags']['inUse']
-        entry['success'] = True
-        return lock_entry(e)
-    handle_exception('ABORTED')
-
-def edit_tag(t):
-    tag_id = t[0]; tag = t[1]
-    if tag_id == '0':
-        handle_exception('All not editable', 28)
-    edit_json = {'title*': tag['title'], 'icon': {"inUse":tag['icon'], 'chooseFrom:':', '.join(password.ICONS)}}
-    edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
-    if edit_json:
-        try:
-            edit_json = json.loads(edit_json)
-        except Exception as ex:
-            handle_exception('EDIT_ERROR', ex)
-        if 'title*' not in edit_json or edit_json['title*'] == '' or not isinstance(edit_json['title*'],str):
-            handle_exception('TITLE_FIELD_ERROR')
-        if 'icon' not in edit_json or 'inUse' not in edit_json['icon'] or edit_json['icon']['inUse'] not in password.ICONS or not isinstance(edit_json['icon']['inUse'],str):
-            handle_exception('WRONG_ICON_ERROR')
-        tag['title'] = edit_json['title*']; tag['icon'] = edit_json['icon']['inUse'] 
-        return t
-    handle_exception('ABORTED')
 
 def start_logging(debug):
     logging.basicConfig(level=logging.DEBUG, filename=LOG_FILE, filemode='w', format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M')
@@ -326,7 +276,10 @@ def init(path, cloud, pinentry, no_disk):
     if cloud == 'git':
         CONFIG['useGit'] = True
         subprocess.call('git init', cwd=CONFIG['path'], shell=True)
-    (pwd, CONFIG['fileName']) = password.PasswordStore.fromInit()
+    try:
+        (pwd, CONFIG['fileName']) = password.PasswordStore.fromInit()
+    except Exception as ex:
+        handle_exception('INIT_ERROR', ex)
     write_config()
     load_config()
     save_storage()
@@ -358,7 +311,10 @@ def grep(name, case_insensitive):
     '''Search for names in decrypted entries'''
     unlock_storage()
     for k, v in pwd.entries.items():
-        v = pwd.unlock_entry((k,v))[1]
+        try:
+            v = pwd.unlock_entry((k,v))[1]
+        except Exception as ex:
+            handle_exception('UNLOCK_ENTRY_ERROR', ex)
         for kk, vv in v.items():
             if kk in ['note', 'title', 'username']:
                 if name.lower() in vv.lower():
@@ -399,7 +355,10 @@ def show(entry_names, secrets, json):
             password = '********'
             safeNote = '********'
         else:
-            e = pwd.unlock_entry(e)
+            try:
+                e = pwd.unlock_entry(e)
+            except Exception as ex:
+                handle_exception('UNLOCK_ENTRY_ERROR', ex)
             password = entry['password']['data']
             safeNote = entry['safe_note']['data']
         if json:
@@ -431,7 +390,10 @@ def clip(user, url, secret, entry_name):
     elif url:
         pyperclip.copy(entry['title'])
     else:
-        e = pwd.unlock_entry(e)
+        try:
+            e = pwd.unlock_entry(e)
+        except Exception as ex:
+            handle_exception('UNLOCK_ENTRY_ERROR', ex)
         if secret:
             pyperclip.copy(entry['safe_note']['data'])
         else:
@@ -464,9 +426,12 @@ def generate(length, insert, type_, clip, seperator, force, entropy):
         e = pwd.get_entry(insert)
         if e is None:
             clean_exit()
-        e = pwd.unlock_entry(e)
+        try:
+            e = pwd.unlock_entry(e)
+        except Exception as ex:
+            handle_exception('UNLOCK_ENTRY_ERROR', ex)
         e[1]['password']['data'] = password
-        e = edit_entry(e)
+        e = pwd.edit_entry(e)
         pwd.insert_entry(e)
         if force or click.confirm('Insert password in entry ' + click.style(e[1]['title'], bold=True)):
             save_storage()
@@ -512,12 +477,12 @@ def insert(tag):
     unlock_storage()
     if tag:
         t = ('',{'title': '', 'icon': 'home'})
-        t = edit_tag(t)
+        t = pwd.edit_tag(t)
         pwd.insert_tag(t)
         save_storage()
     else:
         e = ('',{'title': '', 'username': '', 'password': {'type': 'String', 'data': ''}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': ''}, 'note': '', 'success': True, 'export': True})
-        e = edit_entry(e)
+        e = pwd.edit_entry(e)
         pwd.insert_entry(e)
         save_storage()
     clean_exit()
@@ -532,14 +497,14 @@ def edit(entry_name, tag):#TODO option --entry/--tag with default
         t = pwd.get_tag(tag)
         if t is None:
             clean_exit()
-        t = edit_tag(t)
+        t = pwd.edit_tag(t)
         pwd.insert_tag(t)
         save_storage()
     else:
         e = pwd.get_entry(entry_name)
         if e is None:
             clean_exit()
-        e = edit_entry(e)
+        e = pwd.edit_entry(e)
         pwd.insert_entry(e)
         save_storage()
     clean_exit()
@@ -600,7 +565,10 @@ def export_command(tag_name, entry_name, path, file_format):
     export_passwords = {}
     with click.progressbar(pwd.entries.items(), label='Decrypt entries', show_eta=False, fill_char='#', empty_char='-') as bar:
         for e in bar:
-            e = pwd.unlock_entry(e)
+            try:
+                e = pwd.unlock_entry(e)
+            except Exception as ex:
+                handle_exception('UNLOCK_ENTRY_ERROR', ex)
             export_passwords.update( {str(e[0]) : {'item/url*':e[1]['note'], 'title':e[1]['title'], 'username':e[1]['username'], 'password':e[1]['password']['data'], 'secret':e[1]['safe_note']['data'], 'tags':pwd.tags_to_string(pwd.get_tags_from_entry(e))} } )
     if file_format == 'json':
         with open(os.path.join(CONFIG_PATH, 'export.json'), 'w', encoding='utf8') as f:
@@ -715,6 +683,10 @@ ERROR_CODES = {
         },
     'INIT_ERROR':{
         'message':'Directory not empty, not initialized',
+        'code':17
+        },
+    'UNLOCK_ENTRY_ERROR':{
+        'message':'Error while unlocking entry',
         'code':17
         }
     }
