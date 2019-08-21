@@ -1,18 +1,16 @@
 * Basic features
-** TODO error handling and logging
 ** TODO write unittests for every method
 ** TODO reduce complexity
+** TODO CSV Export
+** TODO CSV Import
+** DONE error handling and logging
 ** DONE check typeof when getting edit input and config parse
 ** DONE Make own click parameter instead of parse_name
 ** DONE support for case sensitive Names
 ** DONE Print unicode symbols correct
 ** DONE device entropy
-** DONE Export
-*** DONE json
-*** TODO CSV
-** DONE Import
-*** DONE json
-*** TODO CSV
+** DONE json Export
+** DONE json Import
 * Optimze
 ** TODO get cryptomodul correct and secure
 ** TODO insert entrie/tag with cli parameters
