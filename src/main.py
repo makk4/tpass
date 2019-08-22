@@ -117,13 +117,13 @@ def save_storage():
     try:
         keys = trezor.getTrezorKeys(client)
         encKey = keys[2]
-        iv = trezor.getEntropy(client, 12)
+        iv = trezor.getEntropy(client, ENC_ENTROPY)
     except Exception as ex:
         handle_exception('TREZOR_DEVICE_ERROR', ex)
     try:
         crypto.encryptStorage(db_json, pwd_file, encKey, iv)
     except Exception as ex:
-        handle_exception('Error while encrypting storage', 12, ex)
+        handle_exception('PASSWORD_FILE_ENCRYPT_ERROR', ex)
     if CONFIG['storeMetaDataOnDisk'] is True:
         with open(tmp_file, 'w') as f:
             json.dump(db_json, f) 
@@ -281,14 +281,15 @@ def lock_entry(e):
     entry['success'] = False; entry['export'] = False
     try:
         get_client()
-        entry['nonce'] = trezor.getEncryptedNonce(client, entry)
+        entropy = trezor.getEntropy(client, NONCE_ENTROPY)
+        entry['nonce'] = trezor.getEncryptedNonce(client, entry, entropy)
         plain_nonce = trezor.getDecryptedNonce(client, entry)
     except Exception as ex:
         handle_exception('Error while accessing trezor device', 2, ex)
     try:
-        iv_pwd = trezor.getEntropy(client, 12)
+        iv_pwd = trezor.getEntropy(client, ENC_ENTROPY)
         entry['password']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']), iv_pwd)
-        iv_secret = trezor.getEntropy(client, 12)
+        iv_secret = trezor.getEntropy(client, ENC_ENTROPY)
         entry['safe_note']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']), iv_secret)
         entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
         entry['success'] = True
@@ -443,12 +444,12 @@ class SettingValue(click.ParamType):
         return value
 
 class AliasedGroup(click.Group):
-    def get_cmd(self, ctx, cmd_name):
+    def get_command(self, ctx, cmd_name):
         try:
             cmd_name = ALIASES[cmd_name].name
         except KeyError:
             pass
-        return super().get_cmd(ctx, cmd_name)
+        return super().get_command(ctx, cmd_name)
 
 
 '''
@@ -502,13 +503,17 @@ def init_cmd(path, cloud, pinentry, no_disk):
     get_client()
     try:
         keys = trezor.getTrezorKeys(client)
-        CONFIG['fileName'] = keys[0]
+        iv = trezor.getEntropy(client, ENC_ENTROPY)
+        CONFIG['fileName'] = keys[0]; encKey = keys[2]
     except Exception as ex:
         handle_exception('TREZOR_KEY_ERROR', ex)
     pwd_file = os.path.join(CONFIG['path'], CONFIG['fileName'])
     write_config()
     load_config()
-    save_storage()
+    try:
+        crypto.encryptStorage(db_json, pwd_file, encKey, iv)
+    except Exception as ex:
+        handle_exception('PASSWORD_FILE_ENCRYPT_ERROR', ex)
     if cloud == 'git':
         subprocess.call('git add *.pswd', cwd=CONFIG['path'], shell=True)
     click.echo('password store initialized in ' + CONFIG['path'])
@@ -918,6 +923,10 @@ ERROR_CODES = {
         },
     'UNLOCK_ENTRY_ERROR':{
         'message':'Error while unlocking entry',
+        'code':17
+        },
+    'PASSWORD_FILE_ENCRYPT_ERROR':{
+        'message':'Error while encrypting password store',
         'code':17
         }
     }

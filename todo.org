@@ -1,3 +1,5 @@
+*/beta/*
+
 * Basic features
 ** TODO write unittests for every method
 ** TODO reduce complexity
@@ -39,7 +41,10 @@
 ** TODO export all fields like trezor, make import edit for choosing field order
 ** TODO check if Nonce changes on every edit in TPM
 
-* Done
+
+*/alpha/*
+
+* Basic features
 ** DONE check for other instances or changed pwd file -> lockfile
 ** DONE editEntry -> use tag by name or id and check if exists?
 ** DONE Edit functions mor straightforward with multiple tags
