@@ -1,10 +1,10 @@
 */beta/*
 
 * Basic features
-** TODO write unittests for every method
 ** TODO reduce complexity
 ** TODO CSV Export
 ** TODO CSV Import
+** DONE insert entrie/tag with cli parameters
 ** DONE error handling and logging
 ** DONE check typeof when getting edit input and config parse
 ** DONE Make own click parameter instead of parse_name
@@ -15,7 +15,6 @@
 ** DONE json Import
 * Optimze
 ** TODO get cryptomodul correct and secure
-** TODO insert entrie/tag with cli parameters
 ** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
 ** TODO simplejson error checking
 ** DONE multiple entries at once on rm, show
@@ -24,9 +23,10 @@
 ** DONE click python keywords
 * repository
 ** TODO screenshots
-** TODO wiki/docs
 ** TODO subrepo trezorlib for testing
+** DONE wiki/docs
 * dev workflow
+** TODO write unittests for every method
 ** TODO naming conventions
 ** TODO pipenv
 ** TODO docker emulator
@@ -35,10 +35,10 @@
 ** DONE direnv
 ** DONE pyenv
 * TPM compatible
-** TODO check for 'title' 'note' 'item' 'url' on TPM
-** TODO check for valid symbols on TPM
+** DONE check for 'title' 'note' 'item' 'url' on TPM
+** DONE check for valid symbols on TPM
 ** TODO input parsing should handle all symbols in names -> -u, -t, -i, -p, -s
-** TODO export all fields like trezor, make import edit for choosing field order
+** DONE export all fields like trezor, make import edit for choosing field order
 ** TODO check if Nonce changes on every edit in TPM
 
 

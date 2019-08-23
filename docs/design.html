@@ -41,38 +41,59 @@
             
   <div class="section" id="design-rationale">
 <h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Design Rationale</a><a class="headerlink" href="#design-rationale" title="Permalink to this headline">¶</a></h1>
-<div class="contents topic" id="the-tiny-table-of-contents">
-<p class="topic-title first">The tiny table of contents</p>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
 <ul class="auto-toc simple">
 <li><a class="reference internal" href="#design-rationale" id="id1">1&nbsp;&nbsp;&nbsp;Design Rationale</a><ul class="auto-toc">
 <li><a class="reference internal" href="#introduction" id="id2">1.1&nbsp;&nbsp;&nbsp;Introduction</a></li>
 <li><a class="reference internal" href="#privacy" id="id3">1.2&nbsp;&nbsp;&nbsp;Privacy</a></li>
 <li><a class="reference internal" href="#cryptography" id="id4">1.3&nbsp;&nbsp;&nbsp;Cryptography</a><ul class="auto-toc">
 <li><a class="reference internal" href="#entropy" id="id5">1.3.1&nbsp;&nbsp;&nbsp;Entropy</a></li>
+<li><a class="reference internal" href="#password-file-encryption-and-decryption" id="id6">1.3.2&nbsp;&nbsp;&nbsp;Password file encryption and decryption</a></li>
+<li><a class="reference internal" href="#entry-encryption-and-decryption" id="id7">1.3.3&nbsp;&nbsp;&nbsp;Entry encryption and decryption</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#syncing" id="id6">1.4&nbsp;&nbsp;&nbsp;Syncing</a></li>
+<li><a class="reference internal" href="#syncing" id="id8">1.4&nbsp;&nbsp;&nbsp;Syncing</a><ul class="auto-toc">
+<li><a class="reference internal" href="#sync-error-handling" id="id9">1.4.1&nbsp;&nbsp;&nbsp;Sync error handling</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 </div>
 <div class="section" id="introduction">
 <h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Introduction</a><a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
-<p>Tpass is build with simplicity in mind. All should be 100% compatible with
+<p>Tpass is build with simplicity in mind. It should be 100% compatible with
 Trezor Password Manager. It is build with unix philosophy in mind, every output
 could be the input for another application, which means it’s scriptable. The
-application is cross plattform and runs on Linux,Windows and MacOS. All the
+application is cross plattform and runs on Linux, Windows and MacOS. All the
 crypto implementation is handled by Trezor Device. The Input and CLI methods are
-implemented with click.</p>
+implemented with click. The functionality is inspired by pass, the unix
+password manager.</p>
 </div>
 <div class="section" id="privacy">
 <h2><a class="toc-backref" href="#id3">1.2&nbsp;&nbsp;&nbsp;Privacy</a><a class="headerlink" href="#privacy" title="Permalink to this headline">¶</a></h2>
 <p>There are two mods aviable for handling metadata</p>
+<ul class="simple">
+<li>write tempfile with metadata to disk</li>
+</ul>
+<p>Unlocks the password file and writes the json file into /dev/shm/ if aviable
+otherwise prints a warning and uses tmp directory of OS, which would be the case
+on Windows and MacOS. From now on on every access to the password store, the
+metadata is read from this file. Provides simpler read access without require
+unlocking every time. At no time the entry password or secret fields are stored
+plaintext in tmp file.</p>
+<ul class="simple">
+<li>decrypt password file on every access</li>
+</ul>
+<p>Unlocks the password file and reads the json file with metadata into ram.
+After every operation this must be done again, but no metadata is stored on
+disk.</p>
 </div>
 <div class="section" id="cryptography">
 <h2><a class="toc-backref" href="#id4">1.3&nbsp;&nbsp;&nbsp;Cryptography</a><a class="headerlink" href="#cryptography" title="Permalink to this headline">¶</a></h2>
 <p>Trezor has provided python implementations for the decryption functions of the
-TPM. Tpass has implented the complement encryption function.</p>
+TPM provied by Satoshilabs. tpass has implented the inverse encryption function.</p>
 <div class="section" id="entropy">
 <h3><a class="toc-backref" href="#id5">1.3.1&nbsp;&nbsp;&nbsp;Entropy</a><a class="headerlink" href="#entropy" title="Permalink to this headline">¶</a></h3>
 <p>All the random data needed for generating the initialization vector iv is
@@ -86,6 +107,13 @@ taken from os.random() and the trezor device 50:50, with the following function:
     <span class="k">return</span> <span class="n">entropy</span>
 </pre></div>
 </div>
+<ul class="simple">
+<li>12 bytes of entropy are used for encryption functions</li>
+<li>32 bit for getting the nonce</li>
+</ul>
+</div>
+<div class="section" id="password-file-encryption-and-decryption">
+<h3><a class="toc-backref" href="#id6">1.3.2&nbsp;&nbsp;&nbsp;Password file encryption and decryption</a><a class="headerlink" href="#password-file-encryption-and-decryption" title="Permalink to this headline">¶</a></h3>
 <p>Storage decryption function is taking from trezorlib/python/tools/pwd_ready.py
 -&gt; decryptStorage, the shown encrytion function is implemented by tpass.</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">encryptStorage</span><span class="p">(</span><span class="n">db_json</span><span class="p">,</span> <span class="n">store_path</span><span class="p">,</span> <span class="n">encKey</span><span class="p">,</span> <span class="n">iv</span><span class="p">):</span>
@@ -98,6 +126,9 @@ taken from os.random() and the trezor device 50:50, with the following function:
         <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">cipherText</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="section" id="entry-encryption-and-decryption">
+<h3><a class="toc-backref" href="#id7">1.3.3&nbsp;&nbsp;&nbsp;Entry encryption and decryption</a><a class="headerlink" href="#entry-encryption-and-decryption" title="Permalink to this headline">¶</a></h3>
 <p>Similar entry decryption function is taking from trezorlib/python/tools/
 pwd_ready.py -&gt; decryptEntryValue, the shown encrytion function is implemented
 by tpass.</p>
@@ -110,17 +141,58 @@ by tpass.</p>
     <span class="k">return</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">cipherText</span><span class="p">]</span>
 </pre></div>
 </div>
+<p>The nonce is re-generated every time an entry gets encrypted, triggert by a
+change made to the entry. The implementation to get the nonce uses the provided
+trezorlibs API. The inverse function to get the decrypted nonce was also taken
+from trezorlib/python/tools/pwd_ready.py.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">getEncryptedNonce</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">entry</span><span class="p">,</span> <span class="n">entropy</span><span class="p">):</span>
+<span class="k">if</span> <span class="s1">&#39;item&#39;</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;item&#39;</span><span class="p">]</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span>
+
+<span class="n">pr</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">pr</span><span class="o">.</span><span class="n">scheme</span> <span class="ow">and</span> <span class="n">pr</span><span class="o">.</span><span class="n">netloc</span><span class="p">:</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">netloc</span>
+
+<span class="n">ENC_KEY</span> <span class="o">=</span> <span class="s1">&#39;Unlock </span><span class="si">%s</span><span class="s1"> for user </span><span class="si">%s</span><span class="s1">?&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;username&#39;</span><span class="p">])</span>
+<span class="n">ENC_VALUE</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">entropy</span><span class="p">)</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
+<span class="n">encrypted_nonce</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">encrypt_keyvalue</span><span class="p">(</span>
+    <span class="n">client</span><span class="p">,</span>
+    <span class="n">BIP32_PATH</span><span class="p">,</span>
+    <span class="n">ENC_KEY</span><span class="p">,</span>
+    <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="n">ENC_VALUE</span><span class="o">.</span><span class="n">hex</span><span class="p">()),</span>
+    <span class="bp">False</span><span class="p">,</span>
+    <span class="bp">True</span>
+<span class="p">)</span>
+
+<span class="k">return</span> <span class="n">encrypted_nonce</span><span class="o">.</span><span class="n">hex</span><span class="p">()</span>
+</pre></div>
+</div>
 </div>
 </div>
 <div class="section" id="syncing">
-<h2><a class="toc-backref" href="#id6">1.4&nbsp;&nbsp;&nbsp;Syncing</a><a class="headerlink" href="#syncing" title="Permalink to this headline">¶</a></h2>
-<p>There are three cloud options aviable and offline mode. When the password file
-is read on startup, by the <cite>unlock_storage</cite> method, than a lockfile is created
-~/.tpass/tpass.lock and is deleted on normal exit or when a exception occurs.
-If a second instance of tpass is trying to read the password file, it discovers
-the lockfile and exits. When saving changes to the password file, it is also
-checked by timestamp, if it changed in the meantime and only proceeds on an
-unchanged pwd file.</p>
+<h2><a class="toc-backref" href="#id8">1.4&nbsp;&nbsp;&nbsp;Syncing</a><a class="headerlink" href="#syncing" title="Permalink to this headline">¶</a></h2>
+<p>There are three cloud options aviable and and also offline mode.</p>
+<ul class="simple">
+<li>Dropbox</li>
+<li>Goolge Drive</li>
+<li>git</li>
+<li>offline</li>
+</ul>
+<p>By choosing Dropbox oor Google Drive the password file is created in the
+according directories to be compatible with Trezor Password Manager. The Syncing
+process is handled by Dropbox or Google.</p>
+<p>When using git the python submodule is used to provide git access from
+everywhere by appending tpass to every git command.</p>
+<div class="section" id="sync-error-handling">
+<h3><a class="toc-backref" href="#id9">1.4.1&nbsp;&nbsp;&nbsp;Sync error handling</a><a class="headerlink" href="#sync-error-handling" title="Permalink to this headline">¶</a></h3>
+<p>On tpass startup a lockfile is created ~/.tpass/lockfile and is deleted on
+normal exit or when a exception occurs. If a second instance of tpass is trying
+to read the password file, it discovers the lockfile and exits. When saving
+changes to the password file, it is also checked by timestamp, if it changed in
+the meantime and only proceeds on an unchanged pwd file.</p>
+</div>
 </div>
 </div>
 

@@ -465,7 +465,7 @@ def cli(ctx, debug):
 
     WARNING:
     Untested Beta Software! - Do not use it\n
-    Not from Satoshi Labs!
+    Not from Satoshilabs!
 
     @author: makk4 <manuel.kl900@gmail.com>\n
     https://github.com/makk4/tpass

@@ -3,7 +3,7 @@ Manual
 
 .. sectnum::
 
-.. contents:: The tiny table of contents
+.. contents::
 
 Init
 ~~~~~~~~~~~~~~~~~~~~~~~~~

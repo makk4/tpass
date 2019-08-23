@@ -69,7 +69,7 @@ unlock    Unlock Storage and writes plain metadata to disk
 - Dropbox, Google Drive, Git synchronisation
 - Offline usage
 - Generate random Passwords and Passphrases
-- Use your own Wordlists of coice, default is EFF large
+- Use your own Wordlists of choice, default is EFF large
 - List, insert, delete, show, edit entries
 - Copy passwords to clipboard or show
 - Export, import database in JSON, CSV
@@ -77,4 +77,10 @@ unlock    Unlock Storage and writes plain metadata to disk
 - Combine entropy from device and os.random for all crypto functions
 - Bash and zsh auto completion
 
+## **Contribute**
+
+Read the [docs](https://makk4.github.io/tpass/contribute) section for mor information.
+
 ## **Docs**
+
+[tpass guide](https://makk4.github.io/tpass/)
