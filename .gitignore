@@ -126,5 +126,6 @@ tags
 .direnv/
 
 # sphinx
+docsrc/build/
 docs/build/doctrees/
 .buildinfo
