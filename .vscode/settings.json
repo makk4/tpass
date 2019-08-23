@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": ".direnv/python-3.7.4/bin/python",
+    "python.pythonPath": "/home/manuel/.pyenv/versions/3.7.4/bin/python",
     "python.testing.unittestArgs": [
         "-v",
         "-s",
@@ -15,5 +15,6 @@
         "**/.project": true,
         "**/.settings": true,
         "**/.factorypath": true
-    }
+    },
+    "restructuredtext.confPath": "${workspaceFolder}/docs/source"
 }

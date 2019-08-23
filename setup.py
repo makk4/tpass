@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='tpass',
-    version='0.1.5',
+    version='0.1.7',
     author='Manuel Klapapcher',
     author_email='manuel.kl900@gmail.com',
     description='cli password manager',

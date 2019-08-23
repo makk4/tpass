@@ -124,3 +124,6 @@ tags
 
 # direnv
 .direnv/
+
+# sphinx
+docs/build/
