@@ -48,7 +48,7 @@ tmp_file = None
 client = None
 
 '''
-Core Methods
+Helper Methods
 '''
 
 def write_lockfile():

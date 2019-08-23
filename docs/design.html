@@ -187,7 +187,7 @@ process is handled by Dropbox or Google.</p>
 everywhere by appending tpass to every git command.</p>
 <div class="section" id="sync-error-handling">
 <h3><a class="toc-backref" href="#id9">1.4.1&nbsp;&nbsp;&nbsp;Sync error handling</a><a class="headerlink" href="#sync-error-handling" title="Permalink to this headline">¶</a></h3>
-<p>On tpass startup a lockfile is created ~/.tpass/lockfile and is deleted on
+<p>On tpass startup a lockfile is created #/.tpass/lockfile and is deleted on
 normal exit or when a exception occurs. If a second instance of tpass is trying
 to read the password file, it discovers the lockfile and exits. When saving
 changes to the password file, it is also checked by timestamp, if it changed in

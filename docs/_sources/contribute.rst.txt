@@ -5,6 +5,9 @@ Contribute
 
 .. contents:: The tiny table of contents
 
+Build and upload
+#########################
+
 depencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -16,7 +19,7 @@ depencies
     git clone https://github.com/pyenv/pyenv.git ~/.pyenv
 
 
-pull from git
+Clone repository
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 clone repository
@@ -32,7 +35,7 @@ update
     git pull --recurse-submodules
 
 
-unittests
+Unittests
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 depencies
@@ -56,11 +59,45 @@ update
 
     git pull --recurse-submodules
 
-upload to pypi
+Upload to PyPi
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+depencies
+
+.. code-block:: bash
+
+    python3 -m pip install --user twine
+
+Upload to Pypi using **twine**
 
 .. code-block:: bash
 
     python3 setup.py sdist bdist_wheel
     twine check dist/*
     twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+
+Docs
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+depencies
+
+.. code-block:: bash
+
+    apt-get install python-sphinx
+
+Docs are build with **sphinx** using the rst format. Github Pages are created also a
+unix man page. The sphinx folder with Makefile and source is in **docsrc/**, the
+**index.html** and all files for Github pages are located in **docs/**. This
+hack is necessary to have source and page in one repository.
+
+.. code-block:: bash
+
+    cd docsrc/
+    make clean
+    make html
+    make github
+    make man
+
+
+Code guidelines
+#########################

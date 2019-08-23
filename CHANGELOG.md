@@ -5,8 +5,8 @@
 First pre-release version
 
 - Trezor Password Manager Compatible
-- Supports Trezor One (untested) and Trezor Model T (tested)
-- Cross plattform. Windows (tested), Linux (tested), MacOS (untested)
+- Supports Trezor One **(untested)** and Trezor Model T
+- Cross plattform. Windows, Linux, MacOS **(untested)**
 - Dropbox, Google Drive, Git synchronisation
 - Offline usage
 - Generate random Passwords and Passphrases

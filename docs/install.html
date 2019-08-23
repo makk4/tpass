@@ -45,51 +45,68 @@
 <p class="topic-title first">Contents</p>
 <ul class="auto-toc simple">
 <li><a class="reference internal" href="#install" id="id1">1&nbsp;&nbsp;&nbsp;Install</a><ul class="auto-toc">
-<li><a class="reference internal" href="#pip-recommend" id="id2">1.1&nbsp;&nbsp;&nbsp;pip (recommend)</a></li>
-<li><a class="reference internal" href="#from-source" id="id3">1.2&nbsp;&nbsp;&nbsp;from source</a><ul class="auto-toc">
-<li><a class="reference internal" href="#autocompletion" id="id4">1.2.1&nbsp;&nbsp;&nbsp;Autocompletion</a></li>
+<li><a class="reference internal" href="#sources" id="id2">1.1&nbsp;&nbsp;&nbsp;Sources</a><ul class="auto-toc">
+<li><a class="reference internal" href="#pip-recommend" id="id3">1.1.1&nbsp;&nbsp;&nbsp;pip (recommend)</a></li>
+<li><a class="reference internal" href="#from-source" id="id4">1.1.2&nbsp;&nbsp;&nbsp;from source</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#bash" id="id5">1.3&nbsp;&nbsp;&nbsp;Bash</a></li>
-<li><a class="reference internal" href="#zsh" id="id6">1.4&nbsp;&nbsp;&nbsp;zsh</a></li>
+<li><a class="reference internal" href="#autocompletion" id="id5">1.2&nbsp;&nbsp;&nbsp;Autocompletion</a><ul class="auto-toc">
+<li><a class="reference internal" href="#bash" id="id6">1.2.1&nbsp;&nbsp;&nbsp;bash</a></li>
+<li><a class="reference internal" href="#zsh" id="id7">1.2.2&nbsp;&nbsp;&nbsp;zsh</a></li>
+<li><a class="reference internal" href="#oh-my-zsh" id="id8">1.2.3&nbsp;&nbsp;&nbsp;oh-my-zsh</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 </div>
+<div class="section" id="sources">
+<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Sources</a><a class="headerlink" href="#sources" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="pip-recommend">
-<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;pip (recommend)</a><a class="headerlink" href="#pip-recommend" title="Permalink to this headline">¶</a></h2>
+<h3><a class="toc-backref" href="#id3">1.1.1&nbsp;&nbsp;&nbsp;pip (recommend)</a><a class="headerlink" href="#pip-recommend" title="Permalink to this headline">¶</a></h3>
 <div class="highlight-bash"><div class="highlight"><pre><span></span>pip3 install --user -i https://test.pypi.org/simple/ tpass
 </pre></div>
 </div>
 </div>
 <div class="section" id="from-source">
-<h2><a class="toc-backref" href="#id3">1.2&nbsp;&nbsp;&nbsp;from source</a><a class="headerlink" href="#from-source" title="Permalink to this headline">¶</a></h2>
+<h3><a class="toc-backref" href="#id4">1.1.2&nbsp;&nbsp;&nbsp;from source</a><a class="headerlink" href="#from-source" title="Permalink to this headline">¶</a></h3>
 <div class="highlight-bash"><div class="highlight"><pre><span></span>git clone git@github:makk4/tpass.git
 python3 setup.py install --user
 </pre></div>
 </div>
+</div>
+</div>
 <div class="section" id="autocompletion">
-<h3><a class="toc-backref" href="#id4">1.2.1&nbsp;&nbsp;&nbsp;Autocompletion</a><a class="headerlink" href="#autocompletion" title="Permalink to this headline">¶</a></h3>
-</div>
-</div>
+<h2><a class="toc-backref" href="#id5">1.2&nbsp;&nbsp;&nbsp;Autocompletion</a><a class="headerlink" href="#autocompletion" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="bash">
-<h2><a class="toc-backref" href="#id5">1.3&nbsp;&nbsp;&nbsp;Bash</a><a class="headerlink" href="#bash" title="Permalink to this headline">¶</a></h2>
+<h3><a class="toc-backref" href="#id6">1.2.1&nbsp;&nbsp;&nbsp;bash</a><a class="headerlink" href="#bash" title="Permalink to this headline">¶</a></h3>
 <div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nv">_TPASS_COMPLETE</span><span class="o">=</span><span class="nb">source</span> tpass &gt; tpass-complete.sh
 </pre></div>
 </div>
-<p>and add this to your <strong>.bashrc</strong>
-.. code-block:: bash</p>
-<blockquote>
-<div>. /path/to/tpass-complete.sh</div></blockquote>
+<p>and add this to your <strong>.bashrc</strong></p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>. /path/to/tpass-complete.sh
+</pre></div>
+</div>
 </div>
 <div class="section" id="zsh">
-<h2><a class="toc-backref" href="#id6">1.4&nbsp;&nbsp;&nbsp;zsh</a><a class="headerlink" href="#zsh" title="Permalink to this headline">¶</a></h2>
+<h3><a class="toc-backref" href="#id7">1.2.2&nbsp;&nbsp;&nbsp;zsh</a><a class="headerlink" href="#zsh" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nv">_TPASS_COMPLETE</span><span class="o">=</span>source_zsh tpass &gt; tpass-complete.sh
+</pre></div>
+</div>
+<p>and add this to your <strong>.zshrc</strong></p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>. /path/to/tpass-complete.sh
+</pre></div>
+</div>
+</div>
+<div class="section" id="oh-my-zsh">
+<h3><a class="toc-backref" href="#id8">1.2.3&nbsp;&nbsp;&nbsp;oh-my-zsh</a><a class="headerlink" href="#oh-my-zsh" title="Permalink to this headline">¶</a></h3>
 <div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nv">_TPASS_COMPLETE</span><span class="o">=</span>source_zsh tpass &gt; ~/.oh-my-zsh/plugins/tpass/tpass-complete.sh
 </pre></div>
 </div>
 <p>and add this to your <strong>.zshrc</strong></p>
 <div class="highlight-bash"><div class="highlight"><pre><span></span>.  ~/.oh-my-zsh/plugins/tpass/tpass-complete.sh
 </pre></div>
+</div>
 </div>
 </div>
 </div>

@@ -8,7 +8,9 @@ Untested Beta Software! - Do not use it
 * [Install](#Install)
 * [Usage](#Usage)
 * [Features](#Features)
+* [Contribute](#Contribute)
 * [Docs](#Docs)
+* [Releases](#Releases)
 
 ## **Install**
 
@@ -20,7 +22,7 @@ or manual with git
 git clone git@github:makk4/tpass.git
 python3 setup.py install --user
 ```
-### **Autocompletion**
+### **Tab autocompletion**
 #### **Bash**
 ```
 _TPASS_COMPLETE=source tpass > tpass-complete.sh
@@ -29,7 +31,15 @@ and add this to your **.bashrc**
 ```
 . /path/to/tpass-complete.sh
 ```
-#### **ZSH**
+#### **zsh**
+```
+_TPASS_COMPLETE=source_zsh tpass > tpass-complete.sh
+```
+and add this to your **.zshrc**
+```
+. /path/to/tpass-complete.sh
+```
+#### **oh-my-zsh**
 ```
 _TPASS_COMPLETE=source_zsh tpass > ~/.oh-my-zsh/plugins/tpass/tpass-complete.sh
 ```
@@ -38,12 +48,19 @@ and add this to your **.zshrc**
 .  ~/.oh-my-zsh/plugins/tpass/tpass-complete.sh
 ```
 ## **Usage**
+
+Read the [docs](https://makk4.github.io/tpass/manual) section for more 
+information.
+
 ```
 Options:
+
 --debug    Show debug info
 --version  Show the version and exit.
 --help     Show this message and exit.
+
 Commands:
+
 clip      Decrypt and copy line of entry to clipboard
 config    Configuration settings
 edit      Edit entry or tag
@@ -79,8 +96,13 @@ unlock    Unlock Storage and writes plain metadata to disk
 
 ## **Contribute**
 
-Read the [docs](https://makk4.github.io/tpass/contribute) section for mor information.
+Read the [docs](https://makk4.github.io/tpass/contribute) section for more 
+information.
 
 ## **Docs**
 
 [tpass guide](https://makk4.github.io/tpass/)
+
+## **Releases**
+
+Read the [changelog](CHANGELOG.md) for information about versions.

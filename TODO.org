@@ -1,9 +1,31 @@
-*/beta/*
+*/release/*
+* TODO Github release
+* TODO upload to PyPi
 
+*/alpha-0.1.8/*
 * Basic features
-** TODO reduce complexity
 ** TODO CSV Export
 ** TODO CSV Import
+* Optimze
+** TODO reduce complexity
+** TODO get cryptomodul correct and secure
+** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
+** TODO simplejson error checking
+* dev workflow
+** TODO sh scripts for building, testing
+** TODO write unittests for every method
+** TODO naming conventions
+** TODO pipenv
+** TODO docker emulator
+* repository
+** TODO screenshots
+** TODO subrepo trezorlib for testing
+* TPM compatible
+** TODO check if Nonce changes on every edit in TPM
+** TODO input parsing should handle all symbols in names -> -u, -t, -i, -p, -s
+
+*/alpha-0.1.7/*
+* Basic features
 ** DONE insert entrie/tag with cli parameters
 ** DONE error handling and logging
 ** DONE check typeof when getting edit input and config parse
@@ -14,36 +36,24 @@
 ** DONE json Export
 ** DONE json Import
 * Optimze
-** TODO get cryptomodul correct and secure
-** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
-** TODO simplejson error checking
 ** DONE multiple entries at once on rm, show
 ** DONE refactor db into seperate class, needed for testing and import
 ** DONE click aliase
 ** DONE click python keywords
-* repository
-** TODO screenshots
-** TODO subrepo trezorlib for testing
-** DONE wiki/docs
-* dev workflow
-** TODO write unittests for every method
-** TODO naming conventions
-** TODO pipenv
-** TODO docker emulator
 ** DONE error codes on exit
 ** DONE logging and debug info
 ** DONE direnv
 ** DONE pyenv
+* repository
+** DONE wiki/docs
+** DONE Github pages
+** DONE License LGPL
 * TPM compatible
 ** DONE check for 'title' 'note' 'item' 'url' on TPM
 ** DONE check for valid symbols on TPM
-** TODO input parsing should handle all symbols in names -> -u, -t, -i, -p, -s
 ** DONE export all fields like trezor, make import edit for choosing field order
-** TODO check if Nonce changes on every edit in TPM
 
-
-*/alpha/*
-
+*/alpha-0.1.0/*
 * Basic features
 ** DONE check for other instances or changed pwd file -> lockfile
 ** DONE editEntry -> use tag by name or id and check if exists?
@@ -67,7 +77,7 @@
 ** DONE findEntrieById Bug
 ** DONE bash autocomplete
 ** DONE Format compatiblle with trezor
-** DONE Error handling
+** DONE basic Error handling
 ** DONE tab completion
 ** DONE getters and find
 ** DONE unit tests

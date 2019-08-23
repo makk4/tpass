@@ -6,7 +6,7 @@ Design Rationale
 .. contents::
 
 Introduction
-~~~~~~~~~~~~
+############
 
 Tpass is build with simplicity in mind. It should be 100% compatible with
 Trezor Password Manager. It is build with unix philosophy in mind, every output
@@ -17,7 +17,7 @@ implemented with click. The functionality is inspired by pass, the unix
 password manager.
 
 Privacy
-~~~~~~~
+#######
 
 There are two mods aviable for handling metadata
 
@@ -37,13 +37,13 @@ After every operation this must be done again, but no metadata is stored on
 disk.
 
 Cryptography
-~~~~~~~~~~~~
+############
 
 Trezor has provided python implementations for the decryption functions of the
 TPM provied by Satoshilabs. tpass has implented the inverse encryption function. 
 
 Entropy
-#######
+~~~~~~~
 
 All the random data needed for generating the initialization vector iv is
 taken from os.random() and the trezor device 50:50, with the following function:
@@ -62,7 +62,7 @@ taken from os.random() and the trezor device 50:50, with the following function:
 - 32 bit for getting the nonce
 
 Password file encryption and decryption
-#######################################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Storage decryption function is taking from trezorlib/python/tools/pwd_ready.py
 -> decryptStorage, the shown encrytion function is implemented by tpass.
@@ -79,7 +79,7 @@ Storage decryption function is taking from trezorlib/python/tools/pwd_ready.py
             f.write(cipherText)
 
 Entry encryption and decryption
-###############################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Similar entry decryption function is taking from trezorlib/python/tools/
 pwd_ready.py -> decryptEntryValue, the shown encrytion function is implemented
@@ -126,7 +126,7 @@ from trezorlib/python/tools/pwd_ready.py.
     return encrypted_nonce.hex()
 
 Syncing
-~~~~~~~
+#######
 
 There are three cloud options aviable and and also offline mode.
 
@@ -143,9 +143,9 @@ When using git the python submodule is used to provide git access from
 everywhere by appending tpass to every git command.
 
 Sync error handling
-###################
+~~~~~~~~~~~~~~~~~~~
 
-On tpass startup a lockfile is created ~/.tpass/lockfile and is deleted on
+On tpass startup a lockfile is created #/.tpass/lockfile and is deleted on
 normal exit or when a exception occurs. If a second instance of tpass is trying
 to read the password file, it discovers the lockfile and exits. When saving
 changes to the password file, it is also checked by timestamp, if it changed in
