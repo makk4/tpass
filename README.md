@@ -4,7 +4,7 @@ Simple Trezor Password Manager interface for command line, inspired by pass.
 
 Untested Beta Software! - Do not use it
 
-<img src="docsrc/source/tpass.png" alt="drawing" width="700"/>
+<img src="docs/_images/tpass.png" alt="drawing" width="700"/>
 
 ## Table of contents
 * [Install](#Install)
