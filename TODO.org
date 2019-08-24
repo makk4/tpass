@@ -1,12 +1,15 @@
 */release/*
 * TODO Github release
 * TODO upload to PyPi
+* TODO debian package
+* TODO arch package
+* TODO windows exe
 
 */alpha-0.1.8/*
 * Basic features
-** TODO make lists in edit entry/tags json output
 ** TODO CSV Export
 ** TODO CSV Import
+** DONE make lists in edit entry/tags json output
 * Optimze
 ** TODO reduce complexity
 ** TODO get cryptomodul correct and secure

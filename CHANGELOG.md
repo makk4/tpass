@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.1.8
+### 0.1.8 (Work in Progress)
 
 First release on PyPi
 
@@ -8,7 +8,7 @@ First release on PyPi
 - CSV import/export
 - edit fields in import/export
 
-### 0.1.7
+### 0.1.7 (Aug 22, 2019)
 
 First pre-release version published on PyPi test
 

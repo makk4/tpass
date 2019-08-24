@@ -113,6 +113,18 @@ View man page
 
 To view html locally, open **/docsrc/buld/html/intex.html** with in browser
 
+Latex PDF
+
+Depencies:
+
+.. code-block:: bash
+
+    sudo apt install texlive-full tlatexmk
+
+.. code-block:: bash
+
+    make latexpdf
+
 Code guidelines
 #########################
 

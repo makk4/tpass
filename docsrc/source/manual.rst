@@ -8,8 +8,6 @@ Manual
 Usage
 #########################
 
-.. image:: tpass.png
-
 .. code-block:: bash
 
     tpass <option> <command>
@@ -409,4 +407,9 @@ Files
 
 Config values
 #########################
+
+- **fileName**
+- **path**
+- **useGit**
+- **storeMetadataOnDisk**
 

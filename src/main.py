@@ -20,19 +20,22 @@ from src import crypto
 '''
 Config variables
 '''
+# Paths
 DEFAULT_PATH = os.path.join(os.path.expanduser('~'), '.tpassword-store')
 DROPBOX_PATH = os.path.join(os.path.expanduser('~'), 'Dropbox', 'Apps', 'TREZOR Password Manager')
 GOOGLE_DRIVE_PATH = os.path.join(os.path.expanduser('~'), 'Google Drive', 'Apps', 'TREZOR Password Manager')
 CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.tpass')
+TMP_PATH = os.path.join('/', 'dev', 'shm')
+# File Locations
 CONFIG_FILE = os.path.join(CONFIG_PATH, 'config.json')
 DICEWARE_FILE = os.path.join(CONFIG_PATH, 'wordlist.txt')
 LOG_FILE = os.path.join(CONFIG_PATH, 'tpass.log')
 LOCK_FILE = os.path.join(CONFIG_PATH, 'lockfile')
-TMP_PATH = os.path.join('/', 'dev', 'shm')
-LOCK = {'uuid':uuid.uuid4().int, }
-CLIPBOARD_CLEAR_TIME = 15
-CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'clipboardClearTimeSec': CLIPBOARD_CLEAR_TIME, 'storeMetaDataOnDisk': True, 'showIcons': False}
+# Actual Files
 ICONS = {'home':u'\U0001f3e0', 'person-stalker':u'\U0001F469\u200D\U0001F467', 'social-bitcoin':'₿', 'person':u'\U0001F642', 'star':u'\u2B50', 'flag':u'\U0001F3F3', 'heart':u'\u2764', 'settings':u'\u2699', 'email':u'\u2709', 'cloud':u'\u2601', 'alert-circled':u'\u26a0', 'android-cart':u'\U0001f6d2', 'image':u'\U0001F5BC', 'card':u'\U0001f4b3', 'earth':u'\U0001F310', 'wifi':u'\U0001f4f6'}
+CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'clipboardClearTimeSec': 15, 'storeMetaDataOnDisk': True, 'showIcons': False}
+LOCK = {'uuid':uuid.uuid4().int, }
+# Constants
 ENC_ENTROPY_BYTES = 12
 NONCE_ENTROPY_BYTES = 32
 
@@ -194,7 +197,7 @@ def start_logging(debug):
 Password Store Methods
 '''
 
-def get_entry(names):#compare tags given
+def get_entry(names):# TODO compare tags given
     tag = names[0]; title = names[1]; username = names[2]; entry_id = names[3]
     if entry_id != '' and entries.get(entry_id):
         return entry_id, entries[entry_id]
@@ -256,9 +259,9 @@ def tags_to_string(ts, showIcons=False):
 
 def unlock_entry(e):
     entry_id = e[0]; entry = e[1]
-    if entry['success'] is False or entry['export'] is True:
+    if entry['export'] is True:
         handle_exception('UNLOCK_ENTRY_ERROR')
-    entry['success'] = False; entry['export'] = True
+    entry['export'] = True
     try:   
         get_client()
         plain_nonce = trezor.getDecryptedNonce(client, entry)
@@ -267,17 +270,15 @@ def unlock_entry(e):
     try:
         entry['password']['data'] = crypto.decryptEntryValue(plain_nonce, entry['password']['data'])
         entry['safe_note']['data'] = crypto.decryptEntryValue(plain_nonce, entry['safe_note']['data'])
-        entry['password']['type'] = 'String'; entry['safe_note']['type'] = 'String'
-        entry['success'] = True
     except Exception as ex:
         handle_exception('DECRYPT_ENTRY_ERROR', ex)
     return e
 
 def lock_entry(e):
     entry_id = e[0]; entry = e[1]
-    if entry['success'] is False or entry['export'] is False:
+    if entry['export'] is False:
         handle_exception('LOCK_ENTRY_ERROR')
-    entry['success'] = False; entry['export'] = False
+    entry['export'] = False
     try:
         get_client()
         entropy = trezor.getEntropy(client, NONCE_ENTROPY_BYTES)
@@ -290,8 +291,6 @@ def lock_entry(e):
         entry['password']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']), iv_pwd)
         iv_secret = trezor.getEntropy(client, ENC_ENTROPY_BYTES)
         entry['safe_note']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']), iv_secret)
-        entry['password']['type'] = 'Buffer'; entry['safe_note']['type'] = 'Buffer'
-        entry['success'] = True
     except Exception as ex:
         handle_exception('ENCRYPT_ENTRY_ERROR', ex)
     return e
@@ -299,8 +298,8 @@ def lock_entry(e):
 def insert_entry(e):
     global entries
     entry_id = e[0]; entry = e[1]
-    if entry['success'] is False or entry['export'] is True:
-        handle_exception('INSERT_ENTRY_ERROR')
+    if entry['export'] is True:
+        e = lock_entry(e)
     if entry_id == '':
         for k in entries.keys():
             entry_id = str(int(k) + 1)
@@ -312,10 +311,11 @@ def edit_entry(e):#TODO don't show <All>
     entry = e[1]
     if entry['export'] is False:
         e = unlock_entry(e)
-    if entry['success'] is False:
-        handle_exception('EDIT_ERROR')
-    entry['success'] = False
-    edit_json = {'item/url*':entry['title'], 'title':entry['note'], 'username':entry['username'], 'password':entry['password']['data'], 'secret':entry['safe_note']['data'], 'tags': {'inUse':tags_to_string(get_tags_from_entry(e), False), 'chooseFrom': tags_to_string(tags, False)}}
+    edit_json = {'item/url*':entry['title'], 'title':entry['note'], \
+         'username':entry['username'], 'password':entry['password']['data'], \
+             'secret':entry['safe_note']['data'], 'tags': {'inUse': \
+                    [v.get('title') for k,v in get_tags_from_entry(e).items()], \
+                        'chooseFrom': [v.get('title') for k,v in tags.items()]}}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
     if edit_json:
         try:
@@ -329,20 +329,18 @@ def edit_entry(e):#TODO don't show <All>
         if edit_json['item/url*'] == '':
             handle_exception('ITEM_FIELD_ERROR')
         entry['title'] = edit_json['item/url*']; entry['note'] = edit_json['title']; entry['username'] = edit_json['username']; entry['password']['data'] = edit_json['password']; entry['safe_note']['data'] = edit_json['secret']
-        ts_input = edit_json['tags']['inUse'].split(',')
         entry['tags'] = []
-        for t in ts_input:
+        for t in edit_json['tags']['inUse']: #TODO array of Strings
             for k, v in tags.items():
                 if t == v['title'] and t != 'All':
                     entry['tags'].append(int(k))
-        #dict(filter(lambda t: t in tags['title'] and t != 'All', ts))
-        entry['success'] = True
+        #TODO dict(filter(lambda t: t in tags['title'] and t != 'All', ts))
         return lock_entry(e)
     handle_exception('ABORTED')
 
 def edit_tag(t):
     tag_id = t[0]; tag = t[1]
-    edit_json = {'title': tag['title'], 'icon': {'inUse':tag['icon'], 'chooseFrom:':', '.join(ICONS)}}
+    edit_json = {'title': tag['title'], 'icon': {'inUse':tag['icon'], 'chooseFrom:':[k for k,v in ICONS.items()]}}
     edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
     if edit_json:
         try:
@@ -706,7 +704,7 @@ def insert_cmd(tag, direct, title, user, pwd, secret):
         insert_tag(t)
         save_storage()
     else:
-        e = ('',{'title': title, 'username': user, 'password': {'type': 'String', 'data': pwd}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': secret}, 'note': '', 'success': True, 'export': True})
+        e = ('',{'title': title, 'username': user, 'password': {'type': 'Buffer', 'data': pwd}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'Buffer', 'data': secret}, 'note': '', 'success': True, 'export': True})
         if direct is False:
             e = edit_entry(e)
         insert_entry(e)
@@ -819,7 +817,7 @@ def import_cmd(path_to_file):
                 handle_exception('IMPORT_ERROR')
             if v['item/url*'] == '':
                 handle_exception('ITEM_FIELD_ERROR')
-            e = ('',{'title': v['item/url*'], 'username': v['username'], 'password': {'type': 'String', 'data': v['password']}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'String', 'data': v['secret']}, 'note': v['title'], 'success': True, 'export': True})
+            e = ('',{'title': v['item/url*'], 'username': v['username'], 'password': {'type': 'Buffer', 'data': v['password']}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'Buffer', 'data': v['secret']}, 'note': v['title'], 'success': True, 'export': True})
             insert_entry(e)
     save_storage()
     clean_exit()
@@ -830,6 +828,7 @@ ALIASES = {
     'copy': clip_cmd,
     'conf': config_cmd,
     'search': find_cmd,
+    'create': insert_cmd,
     'ins': insert_cmd,
     'ls': list_cmd,
     'del': remove_cmd,

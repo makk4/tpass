@@ -31,6 +31,14 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
 .SH CLI FOR TREZOR PASSWORD MANAGER
+[image]
+.sp
+\fBtPass\fP is build with simplicity in mind. It should be 100% compatible with
+Trezor Password Manager. Every output could be the input for another
+application, which means it’s scriptable. The application is cross plattform and
+runs on Linux, Windows and MacOS. All the crypto implementation is handled by
+Trezor Device. The Input and CLI methods are implemented with click. The
+functionality is inspired by \fBpass\fP, the standard unix password manager.
 .SS 1\ \ \ Install
 .SS Contents
 .INDENT 0.0
@@ -202,7 +210,6 @@ and add this to your \fB\&.zshrc\fP
 .UNINDENT
 .UNINDENT
 .SS 1.1\ \ \ Usage
-[image]
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -759,6 +766,16 @@ CSV import
 \fBlogfile\fP stores config values, located: ~/.tpass/tpass.log
 .UNINDENT
 .SS 1.4\ \ \ Config values
+.INDENT 0.0
+.IP \(bu 2
+\fBfileName\fP
+.IP \(bu 2
+\fBpath\fP
+.IP \(bu 2
+\fBuseGit\fP
+.IP \(bu 2
+\fBstoreMetadataOnDisk\fP
+.UNINDENT
 .SS 1\ \ \ Design
 .SS Contents
 .INDENT 0.0
@@ -766,38 +783,28 @@ CSV import
 \fI\%1\ \ \ Design\fP
 .INDENT 2.0
 .IP \(bu 2
-\fI\%1.1\ \ \ Introduction\fP
+\fI\%1.1\ \ \ Privacy\fP
 .IP \(bu 2
-\fI\%1.2\ \ \ Privacy\fP
-.IP \(bu 2
-\fI\%1.3\ \ \ Cryptography\fP
+\fI\%1.2\ \ \ Cryptography\fP
 .INDENT 2.0
 .IP \(bu 2
-\fI\%1.3.1\ \ \ Entropy\fP
+\fI\%1.2.1\ \ \ Entropy\fP
 .IP \(bu 2
-\fI\%1.3.2\ \ \ Password file encryption and decryption\fP
+\fI\%1.2.2\ \ \ Password file encryption and decryption\fP
 .IP \(bu 2
-\fI\%1.3.3\ \ \ Entry encryption and decryption\fP
+\fI\%1.2.3\ \ \ Entry encryption and decryption\fP
 .UNINDENT
 .IP \(bu 2
-\fI\%1.4\ \ \ Syncing\fP
+\fI\%1.3\ \ \ Syncing\fP
 .INDENT 2.0
 .IP \(bu 2
-\fI\%1.4.1\ \ \ Sync error handling\fP
+\fI\%1.3.1\ \ \ Sync error handling\fP
 .UNINDENT
 .IP \(bu 2
-\fI\%1.5\ \ \ Key Handling\fP
+\fI\%1.4\ \ \ Key Handling\fP
 .UNINDENT
 .UNINDENT
-.SS 1.1\ \ \ Introduction
-.sp
-\fBtPass\fP is build with simplicity in mind. It should be 100% compatible with
-Trezor Password Manager. Every output could be the input for another
-application, which means it\(aqs scriptable. The application is cross plattform and
-runs on Linux, Windows and MacOS. All the crypto implementation is handled by
-Trezor Device. The Input and CLI methods are implemented with click. The
-functionality is inspired by \fBpass\fP, the standard unix password manager.
-.SS 1.2\ \ \ Privacy
+.SS 1.1\ \ \ Privacy
 .sp
 There are two mods aviable for handling metadata
 .INDENT 0.0
@@ -819,11 +826,11 @@ decrypt password file on every access
 Unlocks the password file and reads the json file with metadata into ram.
 After every operation this must be done again, but no metadata is stored on
 disk.
-.SS 1.3\ \ \ Cryptography
+.SS 1.2\ \ \ Cryptography
 .sp
 \fBSatoshilabs\fP has provided python implementations for the decryption functions for the
 \fBTrezor Password manager\fP\&. tpass has implented the inverse encryption function.
-.SS 1.3.1\ \ \ Entropy
+.SS 1.2.1\ \ \ Entropy
 .sp
 All the random data needed for generating the initialization vector \fBiv\fP is
 taken from \fBos.random()\fP and the trezor device 50:50, with the following function:
@@ -845,11 +852,22 @@ def getEntropy(client, length):
 .UNINDENT
 .INDENT 0.0
 .IP \(bu 2
-12 bytes of entropy are used for encryption functions
+12 byte of entropy are used for encryption functions
 .IP \(bu 2
-32 bit for getting the nonce
+32 byte for getting the nonce
 .UNINDENT
-.SS 1.3.2\ \ \ Password file encryption and decryption
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ENC_ENTROPY_BYTES = 12
+NONCE_ENTROPY_BYTES = 32
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.2\ \ \ Password file encryption and decryption
 .sp
 Storage decryption function is taking from \fBtrezorlib/python/tools/pwd_ready.py\fP
 \-> \fBdecryptStorage\fP, the shown encrytion function is implemented by tpass.
@@ -870,7 +888,7 @@ def encryptStorage(db_json, store_path, encKey, iv):
 .fi
 .UNINDENT
 .UNINDENT
-.SS 1.3.3\ \ \ Entry encryption and decryption
+.SS 1.2.3\ \ \ Entry encryption and decryption
 .sp
 Similar entry decryption function is taking from \fBtrezorlib/python/tools/pwd_ready.py\fP
 \-> \fBdecryptEntryValue\fP, the shown encrytion function is implemented by tpass.
@@ -926,7 +944,7 @@ return encrypted_nonce.hex()
 .fi
 .UNINDENT
 .UNINDENT
-.SS 1.4\ \ \ Syncing
+.SS 1.3\ \ \ Syncing
 .sp
 There are three cloud options aviable and and also offline mode.
 .INDENT 0.0
@@ -946,14 +964,14 @@ process is handled by Dropbox or Google.
 .sp
 When using git the python module \fBsubprocess\fP is used to provide git access from
 everywhere by appending tpass to every git command.
-.SS 1.4.1\ \ \ Sync error handling
+.SS 1.3.1\ \ \ Sync error handling
 .sp
 On tpass startup a lockfile is created \fB~/.tpass/lockfile\fP and is deleted on
 normal exit or when a exception occurs. If a second instance of tpass is trying
 to read the password file, it discovers the lockfile and exits. When saving
 changes to the password file, it is also checked by timestamp, if it changed in
 the meantime and only proceeds on an unchanged pwd file.
-.SS 1.5\ \ \ Key Handling
+.SS 1.4\ \ \ Key Handling
 .SS 1\ \ \ Contribute
 .SS The tiny table of contents
 .INDENT 0.0
@@ -1144,6 +1162,30 @@ man build/man/tpass.1
 .UNINDENT
 .sp
 To view html locally, open \fB/docsrc/buld/html/intex.html\fP with in browser
+.sp
+Latex PDF
+.sp
+Depencies:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+sudo apt install texlive\-full tlatexmk
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+make latexpdf
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .SS 1.2\ \ \ Code guidelines
 .SS Indices and tables
 .INDENT 0.0

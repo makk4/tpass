@@ -5,15 +5,6 @@ Design
 
 .. contents::
 
-Introduction
-############################
-
-**tPass** is build with simplicity in mind. It should be 100% compatible with
-Trezor Password Manager. Every output could be the input for another
-application, which means it's scriptable. The application is cross plattform and
-runs on Linux, Windows and MacOS. All the crypto implementation is handled by 
-Trezor Device. The Input and CLI methods are implemented with click. The 
-functionality is inspired by **pass**, the standard unix password manager.
 
 Privacy
 ############################
@@ -57,8 +48,14 @@ taken from **os.random()** and the trezor device 50:50, with the following funct
             raise ValueError(str(length) + ' bytes entropy expected')
         return entropy
 
-- 12 bytes of entropy are used for encryption functions
-- 32 bit for getting the nonce
+- 12 byte of entropy are used for encryption functions
+- 32 byte for getting the nonce
+
+.. code-block:: python
+
+    ENC_ENTROPY_BYTES = 12
+    NONCE_ENTROPY_BYTES = 32
+    
 
 Password file encryption and decryption
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
