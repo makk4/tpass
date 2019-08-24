@@ -1,0 +1,1158 @@
+.\" Man page generated from reStructuredText.
+.
+.TH "TPASS" "1" "Aug 24, 2019" "0.1.8" "tpass"
+.SH NAME
+tpass \- tpass Documentation
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.SH CLI FOR TREZOR PASSWORD MANAGER
+.SS 1\ \ \ Install
+.SS Contents
+.INDENT 0.0
+.IP \(bu 2
+\fI\%1\ \ \ Install\fP
+.INDENT 2.0
+.IP \(bu 2
+\fI\%1.1\ \ \ Sources\fP
+.INDENT 2.0
+.IP \(bu 2
+\fI\%1.1.1\ \ \ pip (recommend)\fP
+.IP \(bu 2
+\fI\%1.1.2\ \ \ from source\fP
+.UNINDENT
+.IP \(bu 2
+\fI\%1.2\ \ \ Autocompletion\fP
+.INDENT 2.0
+.IP \(bu 2
+\fI\%1.2.1\ \ \ bash\fP
+.IP \(bu 2
+\fI\%1.2.2\ \ \ zsh\fP
+.IP \(bu 2
+\fI\%1.2.3\ \ \ oh\-my\-zsh\fP
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS 1.1\ \ \ Sources
+.SS 1.1.1\ \ \ pip (recommend)
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+pip3 install \-\-user \-i https://test.pypi.org/simple/ tpass
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.1.2\ \ \ from source
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+git clone git@github:makk4/tpass.git
+python3 setup.py install \-\-user
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2\ \ \ Autocompletion
+.SS 1.2.1\ \ \ bash
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+_TPASS_COMPLETE=source tpass > tpass\-complete.sh
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+and add this to your \fB\&.bashrc\fP
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+\&. /path/to/tpass\-complete.sh
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.2\ \ \ zsh
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+_TPASS_COMPLETE=source_zsh tpass > tpass\-complete.sh
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+and add this to your \fB\&.zshrc\fP
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+\&. /path/to/tpass\-complete.sh
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.3\ \ \ oh\-my\-zsh
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+_TPASS_COMPLETE=source_zsh tpass > ~/.oh\-my\-zsh/plugins/tpass/tpass\-complete.sh
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+and add this to your \fB\&.zshrc\fP
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+\&.  ~/.oh\-my\-zsh/plugins/tpass/tpass\-complete.sh
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1\ \ \ Manual
+.SS Contents
+.INDENT 0.0
+.IP \(bu 2
+\fI\%1\ \ \ Manual\fP
+.INDENT 2.0
+.IP \(bu 2
+\fI\%1.1\ \ \ Usage\fP
+.IP \(bu 2
+\fI\%1.2\ \ \ Commands\fP
+.INDENT 2.0
+.IP \(bu 2
+\fI\%1.2.1\ \ \ init\fP
+.IP \(bu 2
+\fI\%1.2.2\ \ \ find\fP
+.IP \(bu 2
+\fI\%1.2.3\ \ \ grep\fP
+.IP \(bu 2
+\fI\%1.2.4\ \ \ list\fP
+.IP \(bu 2
+\fI\%1.2.5\ \ \ show\fP
+.IP \(bu 2
+\fI\%1.2.6\ \ \ clip\fP
+.IP \(bu 2
+\fI\%1.2.7\ \ \ generate\fP
+.IP \(bu 2
+\fI\%1.2.8\ \ \ insert\fP
+.IP \(bu 2
+\fI\%1.2.9\ \ \ edit\fP
+.IP \(bu 2
+\fI\%1.2.10\ \ \ remove\fP
+.IP \(bu 2
+\fI\%1.2.11\ \ \ git\fP
+.IP \(bu 2
+\fI\%1.2.12\ \ \ config\fP
+.IP \(bu 2
+\fI\%1.2.13\ \ \ unlock\fP
+.IP \(bu 2
+\fI\%1.2.14\ \ \ lock\fP
+.IP \(bu 2
+\fI\%1.2.15\ \ \ export\fP
+.IP \(bu 2
+\fI\%1.2.16\ \ \ import\fP
+.UNINDENT
+.IP \(bu 2
+\fI\%1.3\ \ \ Files\fP
+.IP \(bu 2
+\fI\%1.4\ \ \ Config values\fP
+.UNINDENT
+.UNINDENT
+.SS 1.1\ \ \ Usage
+[image]
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass <option> <command>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+When no command is provided, which is equivalent to \fBtpass list\fP
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass
+All
+Social
+├── facebook.com :tpass@gmail.com #0
+├── instagram.com :tpass@gmail.com #2
+├── signal app :tpass@gmail.com #3
+└── google.com :tpass@gmail.com #6
+Bitcoin
+├── coinbase.com :tpass@gmail.com #1
+└── wallet 1 : #10
+development
+└── https://github.com :tpass@gmail.com #4
+Favorites
+├── google.com :tpass@gmail.com #6
+├── microsoft.com :tpass@gmail.com #7
+├── ITEM :USERNAME #8
+└── url.com :username #9
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Help option will give overview
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass \-\-help
+Usage: tpass [OPTIONS] COMMAND [ARGS]...
+
+\e\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+
+        tpass
+
+\e\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+
+CLI for Trezor Password Manager
+
+WARNING: Untested Beta Software! \- Do not use it
+
+Not from Satoshilabs!
+
+@author: makk4 <manuel.kl900@gmail.com>
+
+https://github.com/makk4/tpass
+
+Options:
+\-\-debug    Show debug info
+\-\-version  Show the version and exit.
+\-\-help     Show this message and exit.
+
+Commands:
+clip      Decrypt and copy line of entry to clipboard
+config    Configuration settings
+edit      Edit entry or tag
+export    Export password store
+find      List entries and tags that match names
+generate  Generate new password
+git       Call git commands on password store
+grep      Search for names in decrypted entries
+import    Import password store
+init      Initialize new password store
+insert    Insert entry or tag
+list      List entries by tag
+lock      Remove metadata from disk
+remove    Remove entry or tag
+show      Show entries
+unlock    Unlock and write metadata to disk
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2\ \ \ Commands
+.SS 1.2.1\ \ \ init
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass init [\-\-path,\-p <sub\-folder>] [\-\-cloud,\-c <dropbox|git|googledrive|offline>] [\-\-no\-disk]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass init
+Please confirm action on your Trezor device
+password store initialized in /home/user/.tpassword\-store
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.2\ \ \ find
+.sp
+\fBAliase:\fP search
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass find <search\-string>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass find coin
+coinbase.com :tpass@gmail.com #1
+Bitcoin
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.3\ \ \ grep
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass grep <search\-string>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass grep "tpass"
+Please confirm action on your Trezor device
+facebook.com:tpass@gmail.com#0//<username>//: tpass@gmail.com
+coinbase.com:tpass@gmail.com#1//<username>//: tpass@gmail.com
+https://github.com:tpass@gmail.com#4//<username>//: tpass@gmail.com
+google.com:tpass@gmail.com#6//<username>//: tpass@gmail.com
+microsoft.com:tpass@gmail.com#7//<username>//: tpass@gmail.com
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.4\ \ \ list
+.sp
+\fBAliase:\fP ls
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass list <tag>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass ls Social
+Social
+├── facebook.com :tpass@gmail.com #0
+├── instagram.com :tpass@gmail.com #2
+├── signal app :tpass@gmail.com #3
+└── google.com :tpass@gmail.com #6
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.5\ \ \ show
+.sp
+\fBAliase:\fP cat
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass show [\-\-json,\-j] [\-\-secrets,\-s] <entry>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass \-s show "signal app:tpass@gmail.com"
+Please confirm action on your Trezor device
+\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\- (3)
+item/url*: signal app
+title:     signal app
+username:  tpass@gmail.com
+password:  #DA?2j
+secret:    d
+tags:      Social
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.6\ \ \ clip
+.sp
+\fBAliase:\fP cp, copy
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass clip [\-\-secret,\-s] [\-\-user,\-u] [\-\-url,\-i] <entry>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass clip coinbase.com
+Please confirm action on your Trezor device
+Clipboard will clear  [==================\-\-\-\-\-\-\-\-\-\-\-\-\-]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.7\ \ \ generate
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass generate [\-\-insert,\-i <entry>] [\-\-clip,\-c] [\-\-type,\-t <wordlist|pin|password>] [\-\-seperator,\-s <symbols>] [\-\-force,\-f] <length>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass generate \-\-type wordlist
+cold mortuary curtly reference splatter earpiece linoleum sheath tiling retail dreamland briskly net unlikable daisy
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.8\ \ \ insert
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass insert
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass insert
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.9\ \ \ edit
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+    "item/url*": "google.com",
+    "title": "google",
+    "username": "tpass@google.com",
+    "password": "1234",
+    "secret": "this is a test account",
+    "tags": {
+        "inUse": [
+            "Favorites"
+        ],
+        "chooseFrom": [
+            "Social",
+            "Bitcoin",
+            "development",
+            "Favorites"
+        ]
+    }
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Edit tag
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+    "title": "bitcoin",
+    "icon": {
+        "inUse": "social\-bitcoin",
+        "chooseFrom:": [
+            "home",
+            "person\-stalker",
+            "social\-bitcoin",
+            "person",
+            "star",
+            "flag",
+            "heart",
+            "settings",
+            "email",
+            "cloud",
+            "alert\-circled",
+            "android\-cart",
+            "image",
+            "card",
+            "earth",
+            "wifi"
+        ]
+    }
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.10\ \ \ remove
+.SS 1.2.11\ \ \ git
+.SS 1.2.12\ \ \ config
+.sp
+\fBAliase:\fP conf
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass config [\-\-edit,\-e] [\-\-reset,\-r] <setting\-name> <setting\-value>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass config \-e
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Will open editor with config file that looks something like this:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+    "fileName": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b.pswd",
+    "path": "/home/user/.tpassword\-store",
+    "useGit": false,
+    "clipboardClearTimeSec": 15,
+    "storeMetaDataOnDisk": true,
+    "showIcons": true
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.13\ \ \ unlock
+.sp
+Writes tmpfile to disk if \fBstoreMetadataOnDisk\fP is set in config
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass unlock
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass unlock
+Please confirm action on your Trezor device
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.14\ \ \ lock
+.sp
+Deletes tmpfile with metadata from disk
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass lock
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass lock
+metadata deleted: /dev/shm/a8c2e3c46e835541d2d465a9572930b908bc2ef3e05c51387f8ecc92ac340de9.pswd.json
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.15\ \ \ export
+.sp
+CSV export
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+    "export.csv": {
+        "orderAndChooseFields": [
+            "title",
+            "item/url*",
+            "username",
+            "password",
+            "secret",
+            "tags"
+        ]
+    }
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.2.16\ \ \ import
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass import <path\-to\-file>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass import ~/export.csv
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+CSV import
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+    "import.csv": {
+        "orderAndChooseFields": [
+            "title",
+            "item/url*",
+            "username",
+            "password",
+            "secret",
+            "tags"
+        ]
+    }
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.3\ \ \ Files
+.INDENT 0.0
+.IP \(bu 2
+\fBpwd\-file\fP encrypted passowrd file, default path: ~/.tpassword\-store/<file\-name>.pwd
+.IP \(bu 2
+\fBtmp\-file\fP stores metadata, located: /dev/shm/<file\-name>.pwd.json fallback to /tmp/
+.IP \(bu 2
+\fBlockfile\fP is generated on every startup and deleted on exit, to make sure only one instance is accessing password store, located: ~/.tpass/lockfile
+.IP \(bu 2
+\fBconfig file\fP stores config values, located: ~/.tpass/config.json
+.IP \(bu 2
+\fBlogfile\fP stores config values, located: ~/.tpass/tpass.log
+.UNINDENT
+.SS 1.4\ \ \ Config values
+.SS 1\ \ \ Design
+.SS Contents
+.INDENT 0.0
+.IP \(bu 2
+\fI\%1\ \ \ Design\fP
+.INDENT 2.0
+.IP \(bu 2
+\fI\%1.1\ \ \ Introduction\fP
+.IP \(bu 2
+\fI\%1.2\ \ \ Privacy\fP
+.IP \(bu 2
+\fI\%1.3\ \ \ Cryptography\fP
+.INDENT 2.0
+.IP \(bu 2
+\fI\%1.3.1\ \ \ Entropy\fP
+.IP \(bu 2
+\fI\%1.3.2\ \ \ Password file encryption and decryption\fP
+.IP \(bu 2
+\fI\%1.3.3\ \ \ Entry encryption and decryption\fP
+.UNINDENT
+.IP \(bu 2
+\fI\%1.4\ \ \ Syncing\fP
+.INDENT 2.0
+.IP \(bu 2
+\fI\%1.4.1\ \ \ Sync error handling\fP
+.UNINDENT
+.IP \(bu 2
+\fI\%1.5\ \ \ Key Handling\fP
+.UNINDENT
+.UNINDENT
+.SS 1.1\ \ \ Introduction
+.sp
+\fBtPass\fP is build with simplicity in mind. It should be 100% compatible with
+Trezor Password Manager. Every output could be the input for another
+application, which means it\(aqs scriptable. The application is cross plattform and
+runs on Linux, Windows and MacOS. All the crypto implementation is handled by
+Trezor Device. The Input and CLI methods are implemented with click. The
+functionality is inspired by \fBpass\fP, the standard unix password manager.
+.SS 1.2\ \ \ Privacy
+.sp
+There are two mods aviable for handling metadata
+.INDENT 0.0
+.IP \(bu 2
+write tempfile with metadata to disk
+.UNINDENT
+.sp
+Unlocks the password file and writes the json file into \fB/dev/shm/\fP if aviable
+otherwise prints a warning and uses tmp directory of OS, which would be the case
+on \fBWindows\fP and \fBMacOS\fP\&. From now on on every access to the password store, the
+metadata is read from this file. Provides simpler read access without require
+unlocking every time. At no time the entry password or secret fields are stored
+plaintext in tmp file.
+.INDENT 0.0
+.IP \(bu 2
+decrypt password file on every access
+.UNINDENT
+.sp
+Unlocks the password file and reads the json file with metadata into ram.
+After every operation this must be done again, but no metadata is stored on
+disk.
+.SS 1.3\ \ \ Cryptography
+.sp
+\fBSatoshilabs\fP has provided python implementations for the decryption functions for the
+\fBTrezor Password manager\fP\&. tpass has implented the inverse encryption function.
+.SS 1.3.1\ \ \ Entropy
+.sp
+All the random data needed for generating the initialization vector \fBiv\fP is
+taken from \fBos.random()\fP and the trezor device 50:50, with the following function:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+def getEntropy(client, length):
+    trezor_entropy = misc.get_entropy(client, length//2)
+    urandom_entropy = os.urandom(length//2)
+    entropy = trezor_entropy + urandom_entropy
+    if len(entropy) != length:
+        raise ValueError(str(length) + \(aq bytes entropy expected\(aq)
+    return entropy
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP \(bu 2
+12 bytes of entropy are used for encryption functions
+.IP \(bu 2
+32 bit for getting the nonce
+.UNINDENT
+.SS 1.3.2\ \ \ Password file encryption and decryption
+.sp
+Storage decryption function is taking from \fBtrezorlib/python/tools/pwd_ready.py\fP
+\-> \fBdecryptStorage\fP, the shown encrytion function is implemented by tpass.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+def encryptStorage(db_json, store_path, encKey, iv):
+    cipherkey = bytes.fromhex(encKey)
+    cipher = Cipher(algorithms.AES(cipherkey), modes.GCM(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+    cipherText = encryptor.update(json.dumps(db_json).encode("UTF\-8", "replace")) + encryptor.finalize()
+    cipherText = iv + encryptor.tag + cipherText
+    with open(store_path, \(aqwb\(aq) as f:
+        f.write(cipherText)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.3.3\ \ \ Entry encryption and decryption
+.sp
+Similar entry decryption function is taking from \fBtrezorlib/python/tools/pwd_ready.py\fP
+\-> \fBdecryptEntryValue\fP, the shown encrytion function is implemented by tpass.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+def encryptEntryValue(nonce, val, iv):
+    cipherkey = bytes.fromhex(nonce)
+    cipher = Cipher(algorithms.AES(cipherkey), modes.GCM(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+    cipherText = encryptor.update(val.encode("utf\-8", "replace")) + encryptor.finalize()
+    cipherText = iv + encryptor.tag + cipherText
+    return [x for x in cipherText]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The \fBnonce\fP is re\-generated every time an entry gets encrypted, triggert by a
+change made to the entry. The implementation to get the nonce uses the provided
+trezorlibs API. The inverse function to get the decrypted nonce was also taken
+from \fBtrezorlib/python/tools/pwd_ready.py\fP\&.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+def getEncryptedNonce(client, entry, entropy):
+if \(aqitem\(aq in entry:
+    item = entry[\(aqitem\(aq]
+else:
+    item = entry[\(aqtitle\(aq]
+
+pr = urlparse(item)
+if pr.scheme and pr.netloc:
+    item = pr.netloc
+
+ENC_KEY = \(aqUnlock %s for user %s?\(aq % (item, entry[\(aqusername\(aq])
+ENC_VALUE = hashlib.sha256(entropy).digest()
+encrypted_nonce = misc.encrypt_keyvalue(
+    client,
+    BIP32_PATH,
+    ENC_KEY,
+    bytes.fromhex(ENC_VALUE.hex()),
+    False,
+    True
+)
+
+return encrypted_nonce.hex()
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.4\ \ \ Syncing
+.sp
+There are three cloud options aviable and and also offline mode.
+.INDENT 0.0
+.IP \(bu 2
+Dropbox
+.IP \(bu 2
+Goolge Drive
+.IP \(bu 2
+git
+.IP \(bu 2
+offline
+.UNINDENT
+.sp
+By choosing Dropbox or Google Drive the password file is created in the
+according directories to be compatible with Trezor Password Manager. The Syncing
+process is handled by Dropbox or Google.
+.sp
+When using git the python module \fBsubprocess\fP is used to provide git access from
+everywhere by appending tpass to every git command.
+.SS 1.4.1\ \ \ Sync error handling
+.sp
+On tpass startup a lockfile is created \fB~/.tpass/lockfile\fP and is deleted on
+normal exit or when a exception occurs. If a second instance of tpass is trying
+to read the password file, it discovers the lockfile and exits. When saving
+changes to the password file, it is also checked by timestamp, if it changed in
+the meantime and only proceeds on an unchanged pwd file.
+.SS 1.5\ \ \ Key Handling
+.SS 1\ \ \ Contribute
+.SS The tiny table of contents
+.INDENT 0.0
+.IP \(bu 2
+\fI\%1\ \ \ Contribute\fP
+.INDENT 2.0
+.IP \(bu 2
+\fI\%1.1\ \ \ Build and upload\fP
+.INDENT 2.0
+.IP \(bu 2
+\fI\%1.1.1\ \ \ depencies\fP
+.IP \(bu 2
+\fI\%1.1.2\ \ \ Clone repository\fP
+.IP \(bu 2
+\fI\%1.1.3\ \ \ Unittests\fP
+.IP \(bu 2
+\fI\%1.1.4\ \ \ Upload to PyPi\fP
+.IP \(bu 2
+\fI\%1.1.5\ \ \ Docs\fP
+.UNINDENT
+.IP \(bu 2
+\fI\%1.2\ \ \ Code guidelines\fP
+.UNINDENT
+.UNINDENT
+.SS 1.1\ \ \ Build and upload
+.SS 1.1.1\ \ \ depencies
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+sudo apt install \-y direnv
+python \-m pip install \-\-user setuptools wheel virtualenv pipenv
+sudo apt\-get install \-y make build\-essential libssl\-dev zlib1g\-dev libbz2\-dev libreadline\-dev libsqlite3\-dev wget curl llvm libncurses5\-dev libncursesw5\-dev xz\-utils tk\-dev libffi\-dev liblzma\-dev python\-openssl git
+git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.1.2\ \ \ Clone repository
+.sp
+clone repository
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+git clone \-\-recursive git@github.com:makk4/tpass.git
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+update
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+git pull \-\-recurse\-submodules
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.1.3\ \ \ Unittests
+.sp
+depencies
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+sudo apt\-get install scons libsdl2\-dev libsdl2\-image\-dev
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+download emulator
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+git clone \-\-recursive https://github.com/trezor/trezor\-firmware.git
+cd trezor\-firmware/core
+make vendor
+\&./build\-docker.sh
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+update
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+git pull \-\-recurse\-submodules
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.1.4\ \ \ Upload to PyPi
+.sp
+depencies
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+python3 \-m pip install \-\-user twine
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Upload to Pypi using \fBtwine\fP
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+python3 setup.py sdist bdist_wheel
+twine check dist/*
+twine upload \-\-repository\-url https://test.pypi.org/legacy/ dist/*
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.1.5\ \ \ Docs
+.sp
+depencies
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+apt\-get install python\-sphinx
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Docs are build with \fBsphinx\fP using the rst format. Github Pages are created also a
+unix man page. The sphinx folder with Makefile and source is in \fBdocsrc/\fP, the
+\fBindex.html\fP and all files for Github pages are located in \fBdocs/\fP\&. This
+hack is necessary to have source and page in one repository.
+.sp
+HTML
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+cd docsrc/
+make clean && make html && make github
+make man
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Man Page
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+cd docsrc/
+make clean && make man && make manpage
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+View man page
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+man build/man/tpass.1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+To view html locally, open \fB/docsrc/buld/html/intex.html\fP with in browser
+.SS 1.2\ \ \ Code guidelines
+.SS Indices and tables
+.INDENT 0.0
+.IP \(bu 2
+search
+.UNINDENT
+.SH AUTHOR
+makk4
+.SH COPYRIGHT
+2019, makk4
+.\" Generated by docutils manpage writer.
+.

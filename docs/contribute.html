@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>1   Contribute &#8212; tpass 0.1.7 documentation</title>
+    <title>1   Contribute &#8212; tpass 0.1.8 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.7',
+        VERSION:     '0.1.8',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="1   Design Rationale" href="design.html" />
+    <link rel="prev" title="1   Design" href="design.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -120,13 +120,22 @@ twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 unix man page. The sphinx folder with Makefile and source is in <strong>docsrc/</strong>, the
 <strong>index.html</strong> and all files for Github pages are located in <strong>docs/</strong>. This
 hack is necessary to have source and page in one repository.</p>
+<p>HTML</p>
 <div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">cd</span> docsrc/
-make clean
-make html
-make github
+make clean <span class="o">&amp;&amp;</span> make html <span class="o">&amp;&amp;</span> make github
 make man
 </pre></div>
 </div>
+<p>Man Page</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">cd</span> docsrc/
+make clean <span class="o">&amp;&amp;</span> make man <span class="o">&amp;&amp;</span> make manpage
+</pre></div>
+</div>
+<p>View man page</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>man build/man/tpass.1
+</pre></div>
+</div>
+<p>To view html locally, open <strong>/docsrc/buld/html/intex.html</strong> with in browser</p>
 </div>
 </div>
 <div class="section" id="code-guidelines">
@@ -143,7 +152,7 @@ make man
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="design.html" title="previous chapter">1&nbsp;&nbsp;&nbsp;Design Rationale</a></li>
+      <li>Previous: <a href="design.html" title="previous chapter">1&nbsp;&nbsp;&nbsp;Design</a></li>
   </ul></li>
 </ul>
 </div>

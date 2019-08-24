@@ -1,31 +1,30 @@
-Design Rationale
-================
+Design
+============================
 
 .. sectnum::
 
 .. contents::
 
 Introduction
-############
+############################
 
-Tpass is build with simplicity in mind. It should be 100% compatible with
-Trezor Password Manager. It is build with unix philosophy in mind, every output
-could be the input for another application, which means it's scriptable. The
-application is cross plattform and runs on Linux, Windows and MacOS. All the
-crypto implementation is handled by Trezor Device. The Input and CLI methods are
-implemented with click. The functionality is inspired by pass, the unix
-password manager.
+**tPass** is build with simplicity in mind. It should be 100% compatible with
+Trezor Password Manager. Every output could be the input for another
+application, which means it's scriptable. The application is cross plattform and
+runs on Linux, Windows and MacOS. All the crypto implementation is handled by 
+Trezor Device. The Input and CLI methods are implemented with click. The 
+functionality is inspired by **pass**, the standard unix password manager.
 
 Privacy
-#######
+############################
 
 There are two mods aviable for handling metadata
 
 - write tempfile with metadata to disk
 
-Unlocks the password file and writes the json file into /dev/shm/ if aviable
+Unlocks the password file and writes the json file into **/dev/shm/** if aviable
 otherwise prints a warning and uses tmp directory of OS, which would be the case
-on Windows and MacOS. From now on on every access to the password store, the
+on **Windows** and **MacOS**. From now on on every access to the password store, the
 metadata is read from this file. Provides simpler read access without require
 unlocking every time. At no time the entry password or secret fields are stored
 plaintext in tmp file.
@@ -37,16 +36,16 @@ After every operation this must be done again, but no metadata is stored on
 disk.
 
 Cryptography
-############
+############################
 
-Trezor has provided python implementations for the decryption functions of the
-TPM provied by Satoshilabs. tpass has implented the inverse encryption function. 
+**Satoshilabs** has provided python implementations for the decryption functions for the
+**Trezor Password manager**. tpass has implented the inverse encryption function. 
 
 Entropy
-~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-All the random data needed for generating the initialization vector iv is
-taken from os.random() and the trezor device 50:50, with the following function:
+All the random data needed for generating the initialization vector **iv** is
+taken from **os.random()** and the trezor device 50:50, with the following function:
 
 .. code-block:: python
 
@@ -64,8 +63,8 @@ taken from os.random() and the trezor device 50:50, with the following function:
 Password file encryption and decryption
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Storage decryption function is taking from trezorlib/python/tools/pwd_ready.py
--> decryptStorage, the shown encrytion function is implemented by tpass.
+Storage decryption function is taking from **trezorlib/python/tools/pwd_ready.py**
+-> **decryptStorage**, the shown encrytion function is implemented by tpass.
 
 .. code-block:: python
 
@@ -81,9 +80,8 @@ Storage decryption function is taking from trezorlib/python/tools/pwd_ready.py
 Entry encryption and decryption
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Similar entry decryption function is taking from trezorlib/python/tools/
-pwd_ready.py -> decryptEntryValue, the shown encrytion function is implemented
-by tpass.
+Similar entry decryption function is taking from **trezorlib/python/tools/pwd_ready.py** 
+-> **decryptEntryValue**, the shown encrytion function is implemented by tpass.
 
 .. code-block:: python
 
@@ -95,10 +93,10 @@ by tpass.
         cipherText = iv + encryptor.tag + cipherText
         return [x for x in cipherText]
 
-The nonce is re-generated every time an entry gets encrypted, triggert by a
+The **nonce** is re-generated every time an entry gets encrypted, triggert by a
 change made to the entry. The implementation to get the nonce uses the provided
 trezorlibs API. The inverse function to get the decrypted nonce was also taken
-from trezorlib/python/tools/pwd_ready.py.
+from **trezorlib/python/tools/pwd_ready.py**.
 
 .. code-block:: python
 
@@ -126,7 +124,7 @@ from trezorlib/python/tools/pwd_ready.py.
     return encrypted_nonce.hex()
 
 Syncing
-#######
+############################
 
 There are three cloud options aviable and and also offline mode.
 
@@ -135,18 +133,22 @@ There are three cloud options aviable and and also offline mode.
 - git
 - offline
 
-By choosing Dropbox oor Google Drive the password file is created in the
-according directories to be compatible with Trezor Password Manager. The Syncing
+By choosing Dropbox or Google Drive the password file is created in the 
+according directories to be compatible with Trezor Password Manager. The Syncing 
 process is handled by Dropbox or Google.
 
-When using git the python submodule is used to provide git access from
+When using git the python module **subprocess** is used to provide git access from 
 everywhere by appending tpass to every git command.
 
 Sync error handling
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-On tpass startup a lockfile is created #/.tpass/lockfile and is deleted on
-normal exit or when a exception occurs. If a second instance of tpass is trying
-to read the password file, it discovers the lockfile and exits. When saving
-changes to the password file, it is also checked by timestamp, if it changed in
+On tpass startup a lockfile is created **~/.tpass/lockfile** and is deleted on 
+normal exit or when a exception occurs. If a second instance of tpass is trying 
+to read the password file, it discovers the lockfile and exits. When saving 
+changes to the password file, it is also checked by timestamp, if it changed in 
 the meantime and only proceeds on an unchanged pwd file. 
+
+Key Handling
+############################
+

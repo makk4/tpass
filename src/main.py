@@ -205,11 +205,11 @@ def get_entry(names):#compare tags given
     click.echo(click.style(' '.join(names), bold=True) + ' is not in the password store')
     return None
 
-def get_tag(tag_name):
+def get_tag(tag_string):
     for k, v in tags.items():
-        if tag_name == v['title']:
+        if tag_string == v['title']:
             return k, v
-    click.echo(click.style(tag_name, bold=True) + ' is not a tag in the password store')
+    click.echo(click.style(tag_string, bold=True) + ' is not a tag in the password store')
     return None
 
 def get_entries_by_tag(tag_id):
@@ -517,43 +517,43 @@ def init_cmd(path, cloud, no_disk):
     clean_exit()
 
 @cli.command(name='find')
-@click.argument('name', type=click.STRING, nargs=1)
-def find_cmd(name):
+@click.argument('search-string', type=click.STRING, nargs=1)
+def find_cmd(search_string):
     '''List entries and tags that match names'''
     unlock_storage()
-    es = dict(filter(lambda e: name.lower() in e[1]['title'].lower() or name.lower() in e[1]['note'].lower() or name.lower() in e[1]['username'].lower(), entries.items()))
-    ts = dict(filter(lambda t: name.lower() in t[1]['title'].lower(), tags.items()))
+    es = dict(filter(lambda e: search_string.lower() in e[1]['title'].lower() or search_string.lower() in e[1]['note'].lower() or search_string.lower() in e[1]['username'].lower(), entries.items()))
+    ts = dict(filter(lambda t: search_string.lower() in t[1]['title'].lower(), tags.items()))
     print_entries(es)
     print_tags(ts)
     clean_exit()
 
 @cli.command(name='grep')
 @click.option('--case-insensitive', '-i', is_flag=True, help='not case sensitive search')
-@click.argument('name', type=click.STRING, nargs=1)
-def grep_cmd(name, case_insensitive):
-    '''Search for names in decrypted entries'''
+@click.argument('search-string', type=click.STRING, nargs=1)
+def grep_cmd(search_string, case_insensitive):
+    '''Search for search_strings in decrypted entries'''
     unlock_storage()
     for k, v in entries.items():
         v = unlock_entry((k,v))[1]
         for kk, vv in v.items():
-            if kk in ['title', 'note', 'username']:
-                if name.lower() in vv.lower():
-                    click.echo(click.style(v['title'] + ':', bold=True) + click.style(v['username'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<' + kk + '>//: ', fg='blue') + vv)
-        if name.lower() in v['password']['data'].lower():    
-            click.echo(click.style(v['title'] + ':', bold=True) + click.style(v['username'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<password>//: ', fg='blue') + v['password']['data'])
-        if name.lower() in v['safe_note']['data'].lower():  
-            click.echo(click.style(v['title'] + ':', bold=True) + click.style(v['username'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<secret>//: ', fg='blue') + v['safe_note']['data'])
+            if kk in ['title', 'note', 'usersearch_string']:
+                if search_string.lower() in vv.lower():
+                    click.echo(click.style(v['title'] + ':', bold=True) + click.style(v['usersearch_string'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<' + kk + '>//: ', fg='blue') + vv)
+        if search_string.lower() in v['password']['data'].lower():    
+            click.echo(click.style(v['title'] + ':', bold=True) + click.style(v['usersearch_string'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<password>//: ', fg='blue') + v['password']['data'])
+        if search_string.lower() in v['safe_note']['data'].lower():  
+            click.echo(click.style(v['title'] + ':', bold=True) + click.style(v['usersearch_string'], bold=True, fg='green') + click.style('#' + k, bold=True, fg='magenta') + click.style('//<secret>//: ', fg='blue') + v['safe_note']['data'])
     clean_exit()
 
 @cli.command(name='list')
-@click.argument('tag-name', default='', type=TagName(), nargs=1, autocompletion=tab_completion_tags)
-def list_cmd(tag_name):
+@click.argument('tag-string', default='', type=TagName(), nargs=1, autocompletion=tab_completion_tags)
+def list_cmd(tag_string):
     '''List entries by tag'''
     unlock_storage()
-    if tag_name == '':
+    if tag_string == '':
         print_tags(tags, True)
     else:
-        t = get_tag(tag_name)
+        t = get_tag(tag_string)
         if t is not None:
             print_tags({t[0] : t[1]}, True)
     clean_exit()
@@ -561,11 +561,11 @@ def list_cmd(tag_name):
 @cli.command(name='show')
 @click.option('--secrets', '-s', is_flag=True, help='show password and secret notes')
 @click.option('--json', '-j', is_flag=True, help='json format')
-@click.argument('entry-names', type=EntryName(), nargs=-1, autocompletion=tab_completion_entries)
-def show_cmd(entry_names, secrets, json):
+@click.argument('entry-strings', type=EntryName(), nargs=-1, autocompletion=tab_completion_entries)
+def show_cmd(entry_strings, secrets, json):
     '''Show entries'''
     unlock_storage()
-    for name in entry_names:
+    for name in entry_strings:
         e = get_entry(name)
         if e is None:
             continue
@@ -598,11 +598,11 @@ def show_cmd(entry_names, secrets, json):
 @click.option('--user', '-u', is_flag=True, help='copy user')
 @click.option('--url', '-i', is_flag=True, help='copy item/url*')
 @click.option('--secret', '-s', is_flag=True, help='copy secret')
-@click.argument('entry-name', type=EntryName(), nargs=1, autocompletion=tab_completion_entries)
-def clip_cmd(user, url, secret, entry_name):
+@click.argument('entry-string', type=EntryName(), nargs=1, autocompletion=tab_completion_entries)
+def clip_cmd(user, url, secret, entry_string):
     '''Decrypt and copy line of entry to clipboard'''
     unlock_storage()
-    e = get_entry(entry_name)
+    e = get_entry(entry_string)
     if e is None:
         clean_exit()
     entry = e[1]; entry_id = e[0]
@@ -667,8 +667,8 @@ def generate_cmd(length, insert, type_, clip, seperator, force, entropy):
 @click.option('--tag', '-t', type=TagName(), help='remove tag', nargs=1, autocompletion=tab_completion_tags)
 @click.option('--recursive', '-r', is_flag=True, help='recursive remove entries within tag')
 @click.option('--force', '-f', is_flag=True, help='force without confirmation')
-@click.argument('entry-names', type=EntryName(), nargs=-1, autocompletion=tab_completion_entries)
-def remove_cmd(entry_names, tag, recursive, force):# TODO make options TRU/FALSE tag and -1 all args
+@click.argument('entry-strings', type=EntryName(), nargs=-1, autocompletion=tab_completion_entries)
+def remove_cmd(entry_strings, tag, recursive, force):# TODO make options TRU/FALSE tag and -1 all args
     '''Remove entry or tag'''
     unlock_storage()
     global db_json
@@ -680,7 +680,7 @@ def remove_cmd(entry_names, tag, recursive, force):# TODO make options TRU/FALSE
                 save_storage()
     else:
         names = []
-        for name in entry_names:
+        for name in entry_strings:
             e = get_entry(name)
             if e is not None:
                 names.append(entries[e[0]]['title'])
@@ -715,8 +715,8 @@ def insert_cmd(tag, direct, title, user, pwd, secret):
 
 @cli.command(name='edit')
 @click.option('--tag', '-t', type=TagName(), default='', nargs=1, help='edit tag', autocompletion=tab_completion_tags)
-@click.argument('entry-name', type=EntryName(), default='', nargs=1, autocompletion=tab_completion_entries)
-def edit_cmd(entry_name, tag):#TODO option --entry/--tag with default
+@click.argument('entry-string', type=EntryName(), default='', nargs=1, autocompletion=tab_completion_entries)
+def edit_cmd(entry_string, tag):#TODO option --entry/--tag with default
     '''Edit entry or tag'''
     unlock_storage()
     if tag:
@@ -726,7 +726,7 @@ def edit_cmd(entry_name, tag):#TODO option --entry/--tag with default
             insert_tag(t)
             save_storage()
     else:
-        e = get_entry(entry_name)
+        e = get_entry(entry_string)
         if e is not None:
             e = edit_entry(e)
             insert_entry(e)
@@ -782,9 +782,9 @@ def lock_cmd():
 @cli.command(name='export')# TODO CSV
 @click.option('-p', '--path', default=os.path.expanduser('~'), type=click.Path(), help='path for export')
 @click.option('-f', '--file-format', default='json', type=click.Choice(['json', 'csv','txt']), help='file format')
-@click.argument('tag-name', default='all', type=click.STRING, nargs=1, autocompletion=tab_completion_tags)
-@click.argument('entry-name', type=click.STRING, nargs=-1, autocompletion=tab_completion_entries)
-def export_cmd(tag_name, entry_name, path, file_format):
+@click.argument('tag-string', default='all', type=click.STRING, nargs=1, autocompletion=tab_completion_tags)
+@click.argument('entry-string', type=click.STRING, nargs=-1, autocompletion=tab_completion_entries)
+def export_cmd(tag_string, entry_string, path, file_format):
     '''Export password store'''
     global entries
     unlock_storage()

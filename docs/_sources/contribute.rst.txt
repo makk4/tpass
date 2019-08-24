@@ -90,14 +90,29 @@ unix man page. The sphinx folder with Makefile and source is in **docsrc/**, the
 **index.html** and all files for Github pages are located in **docs/**. This
 hack is necessary to have source and page in one repository.
 
+HTML
+
 .. code-block:: bash
 
     cd docsrc/
-    make clean
-    make html
-    make github
+    make clean && make html && make github
     make man
 
+Man Page
+
+.. code-block:: bash
+
+    cd docsrc/
+    make clean && make man && make manpage
+
+View man page
+
+.. code-block:: bash
+
+    man build/man/tpass.1
+
+To view html locally, open **/docsrc/buld/html/intex.html** with in browser
 
 Code guidelines
 #########################
+

@@ -23,3 +23,7 @@ help:
 github:
 	@make html
 	@cp -a build/html/. ../docs
+
+manpage:
+	@make html
+	@cp build/man/tpass.1 ../docs/tpass.1

@@ -4,13 +4,14 @@
 
 */alpha-0.1.8/*
 * Basic features
+** TODO make lists in edit entry/tags json output
 ** TODO CSV Export
 ** TODO CSV Import
 * Optimze
 ** TODO reduce complexity
 ** TODO get cryptomodul correct and secure
 ** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
-** TODO simplejson error checking
+** TODO simplify json error checking
 * dev workflow
 ** TODO sh scripts for building, testing
 ** TODO write unittests for every method
@@ -18,7 +19,6 @@
 ** TODO pipenv
 ** TODO docker emulator
 * repository
-** TODO screenshots
 ** TODO subrepo trezorlib for testing
 * TPM compatible
 ** TODO check if Nonce changes on every edit in TPM

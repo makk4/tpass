@@ -1,4 +1,5 @@
 include README.md
 include wordlist.txt
+include docs/tpass.1
 recursive-include src *.py
 recursive-include test *.py

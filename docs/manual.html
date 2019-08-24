@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>1   Manual &#8212; tpass 0.1.7 documentation</title>
+    <title>1   Manual &#8212; tpass 0.1.8 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.1.7',
+        VERSION:     '0.1.8',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="1   Design Rationale" href="design.html" />
+    <link rel="next" title="1   Design" href="design.html" />
     <link rel="prev" title="1   Install" href="install.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
@@ -45,39 +45,217 @@
 <p class="topic-title first">Contents</p>
 <ul class="auto-toc simple">
 <li><a class="reference internal" href="#manual" id="id1">1&nbsp;&nbsp;&nbsp;Manual</a><ul class="auto-toc">
-<li><a class="reference internal" href="#init" id="id2">1.1&nbsp;&nbsp;&nbsp;Init</a></li>
-<li><a class="reference internal" href="#config" id="id3">1.2&nbsp;&nbsp;&nbsp;Config</a></li>
-<li><a class="reference internal" href="#edit" id="id4">1.3&nbsp;&nbsp;&nbsp;Edit</a><ul class="auto-toc">
-<li><a class="reference internal" href="#edit-entry" id="id5">1.3.1&nbsp;&nbsp;&nbsp;Edit entry</a></li>
-<li><a class="reference internal" href="#edit-tag" id="id6">1.3.2&nbsp;&nbsp;&nbsp;Edit tag</a></li>
+<li><a class="reference internal" href="#usage" id="id2">1.1&nbsp;&nbsp;&nbsp;Usage</a></li>
+<li><a class="reference internal" href="#commands" id="id3">1.2&nbsp;&nbsp;&nbsp;Commands</a><ul class="auto-toc">
+<li><a class="reference internal" href="#init" id="id4">1.2.1&nbsp;&nbsp;&nbsp;init</a></li>
+<li><a class="reference internal" href="#find" id="id5">1.2.2&nbsp;&nbsp;&nbsp;find</a></li>
+<li><a class="reference internal" href="#grep" id="id6">1.2.3&nbsp;&nbsp;&nbsp;grep</a></li>
+<li><a class="reference internal" href="#list" id="id7">1.2.4&nbsp;&nbsp;&nbsp;list</a></li>
+<li><a class="reference internal" href="#show" id="id8">1.2.5&nbsp;&nbsp;&nbsp;show</a></li>
+<li><a class="reference internal" href="#clip" id="id9">1.2.6&nbsp;&nbsp;&nbsp;clip</a></li>
+<li><a class="reference internal" href="#generate" id="id10">1.2.7&nbsp;&nbsp;&nbsp;generate</a></li>
+<li><a class="reference internal" href="#insert" id="id11">1.2.8&nbsp;&nbsp;&nbsp;insert</a></li>
+<li><a class="reference internal" href="#edit" id="id12">1.2.9&nbsp;&nbsp;&nbsp;edit</a></li>
+<li><a class="reference internal" href="#remove" id="id13">1.2.10&nbsp;&nbsp;&nbsp;remove</a></li>
+<li><a class="reference internal" href="#git" id="id14">1.2.11&nbsp;&nbsp;&nbsp;git</a></li>
+<li><a class="reference internal" href="#config" id="id15">1.2.12&nbsp;&nbsp;&nbsp;config</a></li>
+<li><a class="reference internal" href="#unlock" id="id16">1.2.13&nbsp;&nbsp;&nbsp;unlock</a></li>
+<li><a class="reference internal" href="#lock" id="id17">1.2.14&nbsp;&nbsp;&nbsp;lock</a></li>
+<li><a class="reference internal" href="#export" id="id18">1.2.15&nbsp;&nbsp;&nbsp;export</a></li>
+<li><a class="reference internal" href="#import" id="id19">1.2.16&nbsp;&nbsp;&nbsp;import</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#files" id="id20">1.3&nbsp;&nbsp;&nbsp;Files</a></li>
+<li><a class="reference internal" href="#config-values" id="id21">1.4&nbsp;&nbsp;&nbsp;Config values</a></li>
 </ul>
 </li>
 </ul>
 </div>
+<div class="section" id="usage">
+<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Usage</a><a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<img alt="_images/tpass.png" src="_images/tpass.png" />
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass &lt;option&gt; &lt;command&gt;
+</pre></div>
+</div>
+<p>When no command is provided, which is equivalent to <strong>tpass list</strong></p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass
+All
+Social
+├── facebook.com :tpass@gmail.com <span class="c1">#0</span>
+├── instagram.com :tpass@gmail.com <span class="c1">#2</span>
+├── signal app :tpass@gmail.com <span class="c1">#3</span>
+└── google.com :tpass@gmail.com <span class="c1">#6</span>
+Bitcoin
+├── coinbase.com :tpass@gmail.com <span class="c1">#1</span>
+└── wallet <span class="m">1</span> : <span class="c1">#10</span>
+development
+└── https://github.com :tpass@gmail.com <span class="c1">#4</span>
+Favorites
+├── google.com :tpass@gmail.com <span class="c1">#6</span>
+├── microsoft.com :tpass@gmail.com <span class="c1">#7</span>
+├── ITEM :USERNAME <span class="c1">#8</span>
+└── url.com :username <span class="c1">#9</span>
+</pre></div>
+</div>
+<p>Help option will give overview</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass --help
+Usage: tpass <span class="o">[</span>OPTIONS<span class="o">]</span> COMMAND <span class="o">[</span>ARGS<span class="o">]</span>...
+
+<span class="se">\-</span>-----------------------------------
+
+        tpass
+
+<span class="se">\-</span>-----------------------------------
+
+CLI <span class="k">for</span> Trezor Password Manager
+
+WARNING: Untested Beta Software! - Do not use it
+
+Not from Satoshilabs!
+
+@author: makk4 &lt;manuel.kl900@gmail.com&gt;
+
+https://github.com/makk4/tpass
+
+Options:
+--debug    Show debug info
+--version  Show the version and exit.
+--help     Show this message and exit.
+
+Commands:
+clip      Decrypt and copy line of entry to clipboard
+config    Configuration settings
+edit      Edit entry or tag
+<span class="nb">export</span>    Export password store
+find      List entries and tags that match names
+generate  Generate new password
+git       Call git commands on password store
+grep      Search <span class="k">for</span> names in decrypted entries
+import    Import password store
+init      Initialize new password store
+insert    Insert entry or tag
+list      List entries by tag
+lock      Remove metadata from disk
+remove    Remove entry or tag
+show      Show entries
+unlock    Unlock and write metadata to disk
+</pre></div>
+</div>
+</div>
+<div class="section" id="commands">
+<h2><a class="toc-backref" href="#id3">1.2&nbsp;&nbsp;&nbsp;Commands</a><a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="init">
-<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Init</a><a class="headerlink" href="#init" title="Permalink to this headline">¶</a></h2>
+<h3><a class="toc-backref" href="#id4">1.2.1&nbsp;&nbsp;&nbsp;init</a><a class="headerlink" href="#init" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass init <span class="o">[</span>--path,-p &lt;sub-folder&gt;<span class="o">]</span> <span class="o">[</span>--cloud,-c &lt;dropbox<span class="p">|</span>git<span class="p">|</span>googledrive<span class="p">|</span>offline&gt;<span class="o">]</span> <span class="o">[</span>--no-disk<span class="o">]</span>
+</pre></div>
 </div>
-<div class="section" id="config">
-<h2><a class="toc-backref" href="#id3">1.2&nbsp;&nbsp;&nbsp;Config</a><a class="headerlink" href="#config" title="Permalink to this headline">¶</a></h2>
-<p>Config file lokks like this:</p>
-<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
-    <span class="nt">&quot;fileName&quot;</span><span class="p">:</span> <span class="s2">&quot;6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b.pswd&quot;</span><span class="p">,</span>
-    <span class="nt">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;/home/user/.tpassword-store&quot;</span><span class="p">,</span>
-    <span class="nt">&quot;useGit&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-    <span class="nt">&quot;pinentry&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
-    <span class="nt">&quot;clipboardClearTimeSec&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
-    <span class="nt">&quot;storeMetaDataOnDisk&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
-    <span class="nt">&quot;showIcons&quot;</span><span class="p">:</span> <span class="kc">true</span>
-<span class="p">}</span>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass init
+Please confirm action on your Trezor device
+password store initialized in /home/user/.tpassword-store
+</pre></div>
+</div>
+</div>
+<div class="section" id="find">
+<h3><a class="toc-backref" href="#id5">1.2.2&nbsp;&nbsp;&nbsp;find</a><a class="headerlink" href="#find" title="Permalink to this headline">¶</a></h3>
+<p><strong>Aliase:</strong> search</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass find &lt;search-string&gt;
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass find coin
+coinbase.com :tpass@gmail.com <span class="c1">#1</span>
+Bitcoin
+</pre></div>
+</div>
+</div>
+<div class="section" id="grep">
+<h3><a class="toc-backref" href="#id6">1.2.3&nbsp;&nbsp;&nbsp;grep</a><a class="headerlink" href="#grep" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass grep &lt;search-string&gt;
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass grep <span class="s2">&quot;tpass&quot;</span>
+Please confirm action on your Trezor device
+facebook.com:tpass@gmail.com#0//&lt;username&gt;//: tpass@gmail.com
+coinbase.com:tpass@gmail.com#1//&lt;username&gt;//: tpass@gmail.com
+https://github.com:tpass@gmail.com#4//&lt;username&gt;//: tpass@gmail.com
+google.com:tpass@gmail.com#6//&lt;username&gt;//: tpass@gmail.com
+microsoft.com:tpass@gmail.com#7//&lt;username&gt;//: tpass@gmail.com
+</pre></div>
+</div>
+</div>
+<div class="section" id="list">
+<h3><a class="toc-backref" href="#id7">1.2.4&nbsp;&nbsp;&nbsp;list</a><a class="headerlink" href="#list" title="Permalink to this headline">¶</a></h3>
+<p><strong>Aliase:</strong> ls</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass list &lt;tag&gt;
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass ls Social
+Social
+├── facebook.com :tpass@gmail.com <span class="c1">#0</span>
+├── instagram.com :tpass@gmail.com <span class="c1">#2</span>
+├── signal app :tpass@gmail.com <span class="c1">#3</span>
+└── google.com :tpass@gmail.com <span class="c1">#6</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="show">
+<h3><a class="toc-backref" href="#id8">1.2.5&nbsp;&nbsp;&nbsp;show</a><a class="headerlink" href="#show" title="Permalink to this headline">¶</a></h3>
+<p><strong>Aliase:</strong> cat</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass show <span class="o">[</span>--json,-j<span class="o">]</span> <span class="o">[</span>--secrets,-s<span class="o">]</span> &lt;entry&gt;
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass -s show <span class="s2">&quot;signal app:tpass@gmail.com&quot;</span>
+Please confirm action on your Trezor device
+------------------- <span class="o">(</span><span class="m">3</span><span class="o">)</span>
+item/url*: signal app
+title:     signal app
+username:  tpass@gmail.com
+password:  <span class="c1">#DA?2j</span>
+secret:    d
+tags:      Social
+</pre></div>
+</div>
+</div>
+<div class="section" id="clip">
+<h3><a class="toc-backref" href="#id9">1.2.6&nbsp;&nbsp;&nbsp;clip</a><a class="headerlink" href="#clip" title="Permalink to this headline">¶</a></h3>
+<p><strong>Aliase:</strong> cp, copy</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass clip <span class="o">[</span>--secret,-s<span class="o">]</span> <span class="o">[</span>--user,-u<span class="o">]</span> <span class="o">[</span>--url,-i<span class="o">]</span> &lt;entry&gt;
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass clip coinbase.com
+Please confirm action on your Trezor device
+Clipboard will clear  <span class="o">[==================</span>-------------<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="generate">
+<h3><a class="toc-backref" href="#id10">1.2.7&nbsp;&nbsp;&nbsp;generate</a><a class="headerlink" href="#generate" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass generate <span class="o">[</span>--insert,-i &lt;entry&gt;<span class="o">]</span> <span class="o">[</span>--clip,-c<span class="o">]</span> <span class="o">[</span>--type,-t &lt;wordlist<span class="p">|</span>pin<span class="p">|</span>password&gt;<span class="o">]</span> <span class="o">[</span>--seperator,-s &lt;symbols&gt;<span class="o">]</span> <span class="o">[</span>--force,-f<span class="o">]</span> &lt;length&gt;
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass generate --type wordlist
+cold mortuary curtly reference splatter earpiece linoleum sheath tiling retail dreamland briskly net unlikable daisy
+</pre></div>
+</div>
+</div>
+<div class="section" id="insert">
+<h3><a class="toc-backref" href="#id11">1.2.8&nbsp;&nbsp;&nbsp;insert</a><a class="headerlink" href="#insert" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass insert
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass insert
 </pre></div>
 </div>
 </div>
 <div class="section" id="edit">
-<h2><a class="toc-backref" href="#id4">1.3&nbsp;&nbsp;&nbsp;Edit</a><a class="headerlink" href="#edit" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="edit-entry">
-<h3><a class="toc-backref" href="#id5">1.3.1&nbsp;&nbsp;&nbsp;Edit entry</a><a class="headerlink" href="#edit-entry" title="Permalink to this headline">¶</a></h3>
+<h3><a class="toc-backref" href="#id12">1.2.9&nbsp;&nbsp;&nbsp;edit</a><a class="headerlink" href="#edit" title="Permalink to this headline">¶</a></h3>
 <div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="nt">&quot;item/url*&quot;</span><span class="p">:</span> <span class="s2">&quot;google.com&quot;</span><span class="p">,</span>
     <span class="nt">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;google&quot;</span><span class="p">,</span>
@@ -85,25 +263,156 @@
     <span class="nt">&quot;password&quot;</span><span class="p">:</span> <span class="s2">&quot;1234&quot;</span><span class="p">,</span>
     <span class="nt">&quot;secret&quot;</span><span class="p">:</span> <span class="s2">&quot;this is a test account&quot;</span><span class="p">,</span>
     <span class="nt">&quot;tags&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="nt">&quot;inUse&quot;</span><span class="p">:</span> <span class="p">[],</span>
-        <span class="nt">&quot;chooseFrom&quot;</span><span class="p">:</span> <span class="s2">&quot;All&quot;</span>
+        <span class="nt">&quot;inUse&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;Favorites&quot;</span>
+        <span class="p">],</span>
+        <span class="nt">&quot;chooseFrom&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;Social&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Bitcoin&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;development&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Favorites&quot;</span>
+        <span class="p">]</span>
     <span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="edit-tag">
-<h3><a class="toc-backref" href="#id6">1.3.2&nbsp;&nbsp;&nbsp;Edit tag</a><a class="headerlink" href="#edit-tag" title="Permalink to this headline">¶</a></h3>
+<p>Edit tag</p>
 <div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
     <span class="nt">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;bitcoin&quot;</span><span class="p">,</span>
     <span class="nt">&quot;icon&quot;</span><span class="p">:</span> <span class="p">{</span>
         <span class="nt">&quot;inUse&quot;</span><span class="p">:</span> <span class="s2">&quot;social-bitcoin&quot;</span><span class="p">,</span>
-        <span class="nt">&quot;chooseFrom:&quot;</span><span class="p">:</span> <span class="s2">&quot;home, person-stalker, social-bitcoin, person, star, flag, heart, settings, email, cloud, alert-circled, android-cart, image, card, earth, wifi&quot;</span>
+        <span class="nt">&quot;chooseFrom:&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;home&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;person-stalker&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;social-bitcoin&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;person&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;star&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;flag&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;heart&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;settings&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;email&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;cloud&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;alert-circled&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;android-cart&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;image&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;card&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;earth&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;wifi&quot;</span>
+        <span class="p">]</span>
     <span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 </div>
+<div class="section" id="remove">
+<h3><a class="toc-backref" href="#id13">1.2.10&nbsp;&nbsp;&nbsp;remove</a><a class="headerlink" href="#remove" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="git">
+<h3><a class="toc-backref" href="#id14">1.2.11&nbsp;&nbsp;&nbsp;git</a><a class="headerlink" href="#git" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="config">
+<h3><a class="toc-backref" href="#id15">1.2.12&nbsp;&nbsp;&nbsp;config</a><a class="headerlink" href="#config" title="Permalink to this headline">¶</a></h3>
+<p><strong>Aliase:</strong> conf</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass config <span class="o">[</span>--edit,-e<span class="o">]</span> <span class="o">[</span>--reset,-r<span class="o">]</span> &lt;setting-name&gt; &lt;setting-value&gt;
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass config -e
+</pre></div>
+</div>
+<p>Will open editor with config file that looks something like this:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nt">&quot;fileName&quot;</span><span class="p">:</span> <span class="s2">&quot;6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b.pswd&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;/home/user/.tpassword-store&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;useGit&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+    <span class="nt">&quot;clipboardClearTimeSec&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+    <span class="nt">&quot;storeMetaDataOnDisk&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="nt">&quot;showIcons&quot;</span><span class="p">:</span> <span class="kc">true</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="unlock">
+<h3><a class="toc-backref" href="#id16">1.2.13&nbsp;&nbsp;&nbsp;unlock</a><a class="headerlink" href="#unlock" title="Permalink to this headline">¶</a></h3>
+<p>Writes tmpfile to disk if <strong>storeMetadataOnDisk</strong> is set in config</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass unlock
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass unlock
+Please confirm action on your Trezor device
+</pre></div>
+</div>
+</div>
+<div class="section" id="lock">
+<h3><a class="toc-backref" href="#id17">1.2.14&nbsp;&nbsp;&nbsp;lock</a><a class="headerlink" href="#lock" title="Permalink to this headline">¶</a></h3>
+<p>Deletes tmpfile with metadata from disk</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass lock
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass lock
+metadata deleted: /dev/shm/a8c2e3c46e835541d2d465a9572930b908bc2ef3e05c51387f8ecc92ac340de9.pswd.json
+</pre></div>
+</div>
+</div>
+<div class="section" id="export">
+<h3><a class="toc-backref" href="#id18">1.2.15&nbsp;&nbsp;&nbsp;export</a><a class="headerlink" href="#export" title="Permalink to this headline">¶</a></h3>
+<p>CSV export</p>
+<p>Example:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nt">&quot;export.csv&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;orderAndChooseFields&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;title&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;item/url*&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;username&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;password&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;secret&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;tags&quot;</span>
+        <span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="import">
+<h3><a class="toc-backref" href="#id19">1.2.16&nbsp;&nbsp;&nbsp;import</a><a class="headerlink" href="#import" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>tpass import &lt;path-to-file&gt;
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>➜ ~ tpass import ~/export.csv
+</pre></div>
+</div>
+<p>CSV import</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nt">&quot;import.csv&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;orderAndChooseFields&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s2">&quot;title&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;item/url*&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;username&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;password&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;secret&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;tags&quot;</span>
+        <span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="files">
+<h2><a class="toc-backref" href="#id20">1.3&nbsp;&nbsp;&nbsp;Files</a><a class="headerlink" href="#files" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><strong>pwd-file</strong> encrypted passowrd file, default path: ~/.tpassword-store/&lt;file-name&gt;.pwd</li>
+<li><strong>tmp-file</strong> stores metadata, located: /dev/shm/&lt;file-name&gt;.pwd.json fallback to /tmp/</li>
+<li><strong>lockfile</strong> is generated on every startup and deleted on exit, to make sure only one instance is accessing password store, located: ~/.tpass/lockfile</li>
+<li><strong>config file</strong> stores config values, located: ~/.tpass/config.json</li>
+<li><strong>logfile</strong> stores config values, located: ~/.tpass/tpass.log</li>
+</ul>
+</div>
+<div class="section" id="config-values">
+<h2><a class="toc-backref" href="#id21">1.4&nbsp;&nbsp;&nbsp;Config values</a><a class="headerlink" href="#config-values" title="Permalink to this headline">¶</a></h2>
 </div>
 </div>
 
@@ -117,7 +426,7 @@
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="install.html" title="previous chapter">1&nbsp;&nbsp;&nbsp;Install</a></li>
-      <li>Next: <a href="design.html" title="next chapter">1&nbsp;&nbsp;&nbsp;Design Rationale</a></li>
+      <li>Next: <a href="design.html" title="next chapter">1&nbsp;&nbsp;&nbsp;Design</a></li>
   </ul></li>
 </ul>
 </div>
