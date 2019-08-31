@@ -403,7 +403,9 @@ Files
 
 - **config file** stores config values, located: ~/.tpass/config.json
 
-- **logfile** stores config values, located: ~/.tpass/tpass.log
+- **logfile** stores log info, located: ~/.tpass/tpass.log
+
+- **wordlist** used for generating passphrases, default icluded is **EFF large**, place custom wordlist in: ~/.tpass/wordlist.txt
 
 Config values
 #########################

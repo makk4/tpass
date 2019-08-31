@@ -7,12 +7,12 @@
 
 */alpha-0.1.8/*
 * Basic features
+** TODO reduce complexity
+** TODO get cryptomodul correct and secure
 ** TODO CSV Export
 ** TODO CSV Import
 ** DONE make lists in edit entry/tags json output
 * Optimze
-** TODO reduce complexity
-** TODO get cryptomodul correct and secure
 ** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
 ** TODO simplify json error checking
 * dev workflow

@@ -16,133 +16,142 @@ from urllib.parse import urlparse
 
 BIP32_PATH = parse_path("10016h/0")
 
-# @author:satoshilabs
-def waitForDevices():
-    devices = enumerate_devices()
-    while not len(devices):
-        sys.stderr.write("Please connect Trezor to computer and press Enter...")
-        input()
+class TrezorDevice:
+    client = None
+
+    def __getClient(self):
+        if self.client is None:
+            devices = self.__waitForDevices()
+            transport = self.__chooseDevice(devices)
+            self.client = TrezorClient(transport=transport, ui=ui.ClickUI())
+
+    # @author:satoshilabs
+    def __waitForDevices(self):
         devices = enumerate_devices()
-    return devices
+        while not len(devices):
+            sys.stderr.write("Please connect Trezor to computer and press Enter...")
+            input()
+            devices = enumerate_devices()
+        return devices
 
-# @author:satoshilabs
-def chooseDevice(devices):
-    if not len(devices):
-        raise RuntimeError("No Trezor connected!")
+    # @author:satoshilabs
+    def __chooseDevice(self, devices):
+        if not len(devices):
+            raise RuntimeError("No Trezor connected!")
 
-    if len(devices) == 1:
+        if len(devices) == 1:
+            try:
+                return devices[0]
+            except IOError:
+                raise RuntimeError("Device is currently in use")
+
+        i = 0
+        sys.stderr.write("----------------------------\n")
+        sys.stderr.write("Available devices:\n")
+        for d in devices:
+            try:
+                client = TrezorClient(d, ui=ui.ClickUI())
+            except IOError:
+                sys.stderr.write("[-] <device is currently in use>\n")
+                continue
+
+            if client.features.label:
+                sys.stderr.write("[%d] %s\n" % (i, client.features.label))
+            else:
+                sys.stderr.write("[%d] <no label>\n" % i)
+            client.close()
+            i += 1
+
+        sys.stderr.write("----------------------------\n")
+        sys.stderr.write("Please choose device to use:")
+
         try:
-            return devices[0]
-        except IOError:
-            raise RuntimeError("Device is currently in use")
+            device_id = int(input())
+            return devices[device_id]
+        except Exception:
+            raise ValueError("Invalid choice, exiting...")
 
-    i = 0
-    sys.stderr.write("----------------------------\n")
-    sys.stderr.write("Available devices:\n")
-    for d in devices:
-        try:
-            client = TrezorClient(d, ui=ui.ClickUI())
-        except IOError:
-            sys.stderr.write("[-] <device is currently in use>\n")
-            continue
-
-        if client.features.label:
-            sys.stderr.write("[%d] %s\n" % (i, client.features.label))
+    # @author:satoshilabs
+    def getDecryptedNonce(self, entry):
+        self.__getClient()
+        if 'item' in entry:
+            item = entry['item']
         else:
-            sys.stderr.write("[%d] <no label>\n" % i)
-        client.close()
-        i += 1
+            item = entry['title']
 
-    sys.stderr.write("----------------------------\n")
-    sys.stderr.write("Please choose device to use:")
+        pr = urlparse(item)
+        if pr.scheme and pr.netloc:
+            item = pr.netloc
 
-    try:
-        device_id = int(input())
-        return devices[device_id]
-    except Exception:
-        raise ValueError("Invalid choice, exiting...")
+        ENC_KEY = 'Unlock %s for user %s?' % (item, entry['username'])
+        ENC_VALUE = entry['nonce']
+        decrypted_nonce = misc.decrypt_keyvalue(
+            self.client,
+            BIP32_PATH,
+            ENC_KEY,
+            bytes.fromhex(ENC_VALUE),
+            False,
+            True
+        )
+        return decrypted_nonce.hex()
 
-# @author:satoshilabs
-def getDecryptedNonce(client, entry):
-    if 'item' in entry:
-        item = entry['item']
-    else:
-        item = entry['title']
+    def getEncryptedNonce(self, entry, entropy):
+        self.__getClient()
+        if 'item' in entry:
+            item = entry['item']
+        else:
+            item = entry['title']
+            
+        pr = urlparse(item)
+        if pr.scheme and pr.netloc:
+            item = pr.netloc
 
-    pr = urlparse(item)
-    if pr.scheme and pr.netloc:
-        item = pr.netloc
+        ENC_KEY = 'Unlock %s for user %s?' % (item, entry['username'])
+        ENC_VALUE = hashlib.sha256(entropy).digest()
+        encrypted_nonce = misc.encrypt_keyvalue(
+            self.client,
+            BIP32_PATH,
+            ENC_KEY,
+            bytes.fromhex(ENC_VALUE.hex()),
+            False,
+            True
+        )
 
-    ENC_KEY = 'Unlock %s for user %s?' % (item, entry['username'])
-    ENC_VALUE = entry['nonce']
-    decrypted_nonce = misc.decrypt_keyvalue(
-        client,
-        BIP32_PATH,
-        ENC_KEY,
-        bytes.fromhex(ENC_VALUE),
-        False,
-        True
-    )
-    return decrypted_nonce.hex()
+        return encrypted_nonce.hex()
 
-def getEncryptedNonce(client, entry, entropy):
-    if 'item' in entry:
-        item = entry['item']
-    else:
-        item = entry['title']
-        
-    pr = urlparse(item)
-    if pr.scheme and pr.netloc:
-        item = pr.netloc
+    # @author:satoshilabs
+    def getFileEncKey(self, masterKey):
+        filekey, enckey = masterKey[:len(masterKey) // 2], masterKey[len(masterKey) // 2:]
+        FILENAME_MESS = b'5f91add3fa1c3c76e90c90a3bd0999e2bd7833d06a483fe884ee60397aca277a'
+        digest = hmac.new(str.encode(filekey), FILENAME_MESS, hashlib.sha256).hexdigest()
+        filename = digest + '.pswd'
+        return [filename, filekey, enckey]
 
-    ENC_KEY = 'Unlock %s for user %s?' % (item, entry['username'])
-    ENC_VALUE = hashlib.sha256(entropy).digest()
-    encrypted_nonce = misc.encrypt_keyvalue(
-        client,
-        BIP32_PATH,
-        ENC_KEY,
-        bytes.fromhex(ENC_VALUE.hex()),
-        False,
-        True
-    )
+    # @author:satoshilabs
+    def decryptMasterKey(self, client):
+        self.__getClient()
+        ENC_KEY = 'Activate TREZOR Password Manager?'
+        ENC_VALUE = bytes.fromhex('2d650551248d792eabf628f451200d7f51cb63e46aadcbb1038aacb05e8c8aee2d650551248d792eabf628f451200d7f51cb63e46aadcbb1038aacb05e8c8aee')
+        key = misc.encrypt_keyvalue(
+            self.client,
+            BIP32_PATH,
+            ENC_KEY,
+            ENC_VALUE,
+            True,
+            True
+        )
+        return key.hex()
 
-    return encrypted_nonce.hex()
+    def getEntropy(self, length):
+        self.__getClient()
+        trezor_entropy = misc.get_entropy(self.client, length//2)
+        urandom_entropy = os.urandom(length//2)
+        entropy = trezor_entropy + urandom_entropy
+        if len(entropy) != length:
+            raise ValueError(str(length) + ' bytes entropy expected')
+        return entropy
 
-# @author:satoshilabs
-def getFileEncKey(masterKey):
-    filekey, enckey = masterKey[:len(masterKey) // 2], masterKey[len(masterKey) // 2:]
-    FILENAME_MESS = b'5f91add3fa1c3c76e90c90a3bd0999e2bd7833d06a483fe884ee60397aca277a'
-    digest = hmac.new(str.encode(filekey), FILENAME_MESS, hashlib.sha256).hexdigest()
-    filename = digest + '.pswd'
-    return [filename, filekey, enckey]
-
-# @author:satoshilabs
-def decryptMasterKey(client):
-    ENC_KEY = 'Activate TREZOR Password Manager?'
-    ENC_VALUE = bytes.fromhex('2d650551248d792eabf628f451200d7f51cb63e46aadcbb1038aacb05e8c8aee2d650551248d792eabf628f451200d7f51cb63e46aadcbb1038aacb05e8c8aee')
-    key = misc.encrypt_keyvalue(
-        client,
-        BIP32_PATH,
-        ENC_KEY,
-        ENC_VALUE,
-        True,
-        True
-    )
-    return key.hex()
-
-def getEntropy(client, length):
-    trezor_entropy = misc.get_entropy(client, length//2)
-    urandom_entropy = os.urandom(length//2)
-    entropy = trezor_entropy + urandom_entropy
-    if len(entropy) != length:
-        raise ValueError(str(length) + ' bytes entropy expected')
-    return entropy
-
-def getTrezorKeys(client):
-    masterKey = decryptMasterKey(client)
-    return getFileEncKey(masterKey)
-
-def getTrezorClient():
-    devices = waitForDevices()
-    transport = chooseDevice(devices)
-    return TrezorClient(transport=transport, ui=ui.ClickUI())
+    def getTrezorKeys(self):
+        self.__getClient()
+        masterKey = self.decryptMasterKey(self.client)
+        return self.getFileEncKey(masterKey)

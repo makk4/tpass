@@ -45,10 +45,10 @@ Instance variables
 tags = {'0': {'title': 'All', 'icon': 'home'},}
 entries = {}
 db_json = {'version': '0.0.1', 'extVersion': '0.6.0', 'config': {'orderType': 'date'}, 'tags': tags, 'entries': entries}
+client = trezor.TrezorDevice()
 pwd_last_change_time = 0
 pwd_file = None
 tmp_file = None
-client = None
 
 '''
 Helper Methods
@@ -88,9 +88,8 @@ def unlock_storage():
     
     tmp_need_update = not os.path.isfile(tmp_file) or (os.path.isfile(tmp_file) and (os.path.getmtime(tmp_file) < os.path.getmtime(pwd_file)))
     if CONFIG['storeMetaDataOnDisk'] is False or ( CONFIG['storeMetaDataOnDisk'] is True and tmp_need_update ):
-        get_client()
         try:
-            keys = trezor.getTrezorKeys(client)
+            keys = client.getTrezorKeys()
             encKey = keys[2]
         except Exception as ex:
             handle_exception('TREZOR_KEY_ERROR', ex)
@@ -119,11 +118,10 @@ def save_storage():
         handle_exception('LOCKFILE_CHANGED')
     if not os.path.isfile(pwd_file) or os.path.getmtime(pwd_file) != pwd_last_change_time:
         handle_exception('PASSWORD_FILE_CHANGED')
-    get_client()
     try:
-        keys = trezor.getTrezorKeys(client)
+        keys = client.getTrezorKeys()
         encKey = keys[2]
-        iv = trezor.getEntropy(client, ENC_ENTROPY_BYTES)
+        iv = client.getEntropy(ENC_ENTROPY_BYTES)
     except Exception as ex:
         handle_exception('TREZOR_DEVICE_ERROR', ex)
     try:
@@ -138,8 +136,8 @@ def save_storage():
         
 def load_wordlist():
     wordlist = DICEWARE_FILE
-    if not os.path.isfile(DICEWARE_FILE):
-        wordlist = os.path.join('wordlist.txt')
+    if not os.path.isfile(wordlist):
+        wordlist = os.path.join('.', 'wordlist.txt')
     words = {}
     try:
         with open(wordlist) as f:
@@ -159,14 +157,6 @@ def clear_clipboard():
         for i in bar:
             time.sleep(1)
     pyperclip.copy('')
-
-def get_client():
-    global client
-    if client is None:
-        try:
-            client = trezor.getTrezorClient()
-        except Exception as ex:
-            handle_exception('TREZOR_DEVICE_ERROR', ex)
 
 def handle_exception(error, ex=None):
     logging.error(ERROR_CODES[error]['message'])
@@ -263,8 +253,7 @@ def unlock_entry(e):
         handle_exception('UNLOCK_ENTRY_ERROR')
     entry['export'] = True
     try:   
-        get_client()
-        plain_nonce = trezor.getDecryptedNonce(client, entry)
+        plain_nonce = client.getDecryptedNonce(entry)
     except Exception as ex:
         handle_exception('TREZOR_DEVICE_ERROR', ex)    
     try:
@@ -280,16 +269,15 @@ def lock_entry(e):
         handle_exception('LOCK_ENTRY_ERROR')
     entry['export'] = False
     try:
-        get_client()
-        entropy = trezor.getEntropy(client, NONCE_ENTROPY_BYTES)
-        entry['nonce'] = trezor.getEncryptedNonce(client, entry, entropy)
-        plain_nonce = trezor.getDecryptedNonce(client, entry)
+        entropy = client.getEntropy(NONCE_ENTROPY_BYTES)
+        entry['nonce'] = client.getEncryptedNonce(entry, entropy)
+        plain_nonce = client.getDecryptedNonce(entry)
     except Exception as ex:
         handle_exception('TREZOR_DEVICE_ERROR', ex)
     try:
-        iv_pwd = trezor.getEntropy(client, ENC_ENTROPY_BYTES)
+        iv_pwd = client.getEntropy(ENC_ENTROPY_BYTES)
         entry['password']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['password']['data']), iv_pwd)
-        iv_secret = trezor.getEntropy(client, ENC_ENTROPY_BYTES)
+        iv_secret = client.getEntropy(ENC_ENTROPY_BYTES)
         entry['safe_note']['data'] = crypto.encryptEntryValue(plain_nonce, json.dumps(entry['safe_note']['data']), iv_secret)
     except Exception as ex:
         handle_exception('ENCRYPT_ENTRY_ERROR', ex)
@@ -330,7 +318,7 @@ def edit_entry(e):#TODO don't show <All>
             handle_exception('ITEM_FIELD_ERROR')
         entry['title'] = edit_json['item/url*']; entry['note'] = edit_json['title']; entry['username'] = edit_json['username']; entry['password']['data'] = edit_json['password']; entry['safe_note']['data'] = edit_json['secret']
         entry['tags'] = []
-        for t in edit_json['tags']['inUse']: #TODO array of Strings
+        for t in edit_json['tags']['inUse']:
             for k, v in tags.items():
                 if t == v['title'] and t != 'All':
                     entry['tags'].append(int(k))
@@ -385,7 +373,7 @@ CLI Helper Methods
 
 def tab_completion_entries(ctx, args, incomplete):
     load_config()
-    unlock_storage()
+    unlock_storage() # TODO read tmp file
     tabs = []
     for k,v in tags.items():
         es = get_entries_by_tag(k)
@@ -395,7 +383,7 @@ def tab_completion_entries(ctx, args, incomplete):
 
 def tab_completion_tags(ctx, args, incomplete):
     load_config()
-    unlock_storage()
+    unlock_storage() # TODO read tmp file
     tabs = []
     for t in tags:
         tabs.append(tags[t]['title'] + '/')
@@ -495,10 +483,9 @@ def init_cmd(path, cloud, no_disk):
     if cloud == 'git':
         CONFIG['useGit'] = True
         subprocess.call('git init', cwd=CONFIG['path'], shell=True)
-    get_client()
     try:
-        keys = trezor.getTrezorKeys(client)
-        iv = trezor.getEntropy(client, ENC_ENTROPY_BYTES)
+        keys = client.getTrezorKeys()
+        iv = client.getEntropy(ENC_ENTROPY_BYTES)
         CONFIG['fileName'] = keys[0]; encKey = keys[2]
     except Exception as ex:
         handle_exception('TREZOR_KEY_ERROR', ex)
@@ -632,8 +619,7 @@ def generate_cmd(length, insert, type_, clip, seperator, force, entropy):
         if not click.confirm('Warning: ' + length + ' is too short for password with type ' + type_ + '. Continue?'):
             handle_exception('ABORTED')
     if entropy:
-        get_client()
-        entropy = trezor.getEntropy(client, length)
+        entropy = client.getEntropy(length)
     else:
         entropy = None
     if type_ == 'wordlist':
@@ -666,7 +652,7 @@ def generate_cmd(length, insert, type_, clip, seperator, force, entropy):
 @click.option('--recursive', '-r', is_flag=True, help='recursive remove entries within tag')
 @click.option('--force', '-f', is_flag=True, help='force without confirmation')
 @click.argument('entry-strings', type=EntryName(), nargs=-1, autocompletion=tab_completion_entries)
-def remove_cmd(entry_strings, tag, recursive, force):# TODO make options TRU/FALSE tag and -1 all args
+def remove_cmd(entry_strings, tag, recursive, force):# TODO make options TRU/FALSE tag
     '''Remove entry or tag'''
     unlock_storage()
     global db_json
@@ -736,7 +722,7 @@ def edit_cmd(entry_string, tag):#TODO option --entry/--tag with default
 def git_cmd(commands):
     '''Call git commands on password store'''
     if CONFIG['useGit'] is True:
-        subprocess.call('git '+ ' '.join(commands), cwd=CONFIG['path'], shell=True)
+        subprocess.call(['git '+ ' '.join(commands)], cwd=CONFIG['path'], shell=True)
     else:
         click.echo('Git is not enabled')
     clean_exit()
