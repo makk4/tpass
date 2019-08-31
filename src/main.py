@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import click
+import collections
 import csv
 import logging
+import operator
 import os
 import pyperclip
 import re
@@ -14,8 +16,8 @@ try:
     import simplejson as json
 except:
     import json
-from src import trezor
 from src import crypto
+from src import trezor
 
 '''
 Config variables
@@ -33,7 +35,7 @@ LOG_FILE = os.path.join(CONFIG_PATH, 'tpass.log')
 LOCK_FILE = os.path.join(CONFIG_PATH, 'lockfile')
 # Actual Files
 ICONS = {'home':u'\U0001f3e0', 'person-stalker':u'\U0001F469\u200D\U0001F467', 'social-bitcoin':'₿', 'person':u'\U0001F642', 'star':u'\u2B50', 'flag':u'\U0001F3F3', 'heart':u'\u2764', 'settings':u'\u2699', 'email':u'\u2709', 'cloud':u'\u2601', 'alert-circled':u'\u26a0', 'android-cart':u'\U0001f6d2', 'image':u'\U0001F5BC', 'card':u'\U0001f4b3', 'earth':u'\U0001F310', 'wifi':u'\U0001f4f6'}
-CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'clipboardClearTimeSec': 15, 'storeMetaDataOnDisk': True, 'showIcons': False}
+CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'clipboardClearTimeSec': 15, 'storeMetaDataOnDisk': True, 'orderType': 'date', 'showIcons': False}
 LOCK = {'uuid':uuid.uuid4().int, }
 # Constants
 ENC_ENTROPY_BYTES = 12
@@ -97,7 +99,7 @@ def unlock_storage():
             db_json = crypto.decryptStorage(pwd_file, encKey)
         except Exception as ex:
             handle_exception('PASSWORD_UNLOCK_READ_ERROR', ex)
-        entries = db_json['entries']; tags = db_json['tags']
+        entries = db_json['entries']; tags = db_json['tags']; db_json['config']['orderType'] = CONFIG['orderType'] 
         if CONFIG['storeMetaDataOnDisk'] is True:
             with open(tmp_file, 'w') as f:
                 json.dump(db_json, f)
@@ -106,6 +108,12 @@ def unlock_storage():
         with open(tmp_file) as f:
             db_json = json.load(f)
             entries = db_json['entries']; tags = db_json['tags']
+    if CONFIG['orderType'] == 'title':
+        entries = collections.OrderedDict(sorted(entries.items(), key=lambda v: v[1]['title']))
+        tags = collections.OrderedDict(sorted(tags.items(), key=lambda v: v[1]['title']))
+    elif CONFIG['orderType'] == 'date':
+        entries = collections.OrderedDict(sorted(entries.items()))
+        tags = collections.OrderedDict(sorted(tags.items()))
     pwd_last_change_time = os.path.getmtime(pwd_file)
 
 def save_storage():
@@ -766,9 +774,7 @@ def lock_cmd():
 @cli.command(name='export')# TODO CSV
 @click.option('-p', '--path', default=os.path.expanduser('~'), type=click.Path(), help='path for export')
 @click.option('-f', '--file-format', default='json', type=click.Choice(['json', 'csv','txt']), help='file format')
-@click.argument('tag-string', default='all', type=click.STRING, nargs=1, autocompletion=tab_completion_tags)
-@click.argument('entry-string', type=click.STRING, nargs=-1, autocompletion=tab_completion_entries)
-def export_cmd(tag_string, entry_string, path, file_format):
+def export_cmd(path, file_format):
     '''Export password store'''
     global entries
     unlock_storage()
@@ -781,7 +787,8 @@ def export_cmd(tag_string, entry_string, path, file_format):
         with open(os.path.join(CONFIG_PATH, 'export.json'), 'w', encoding='utf8') as f:
             json.dump(export_passwords, f)
     elif file_format == 'csv':
-        return
+        edit_json = {'0': 'item/url*', '1': 'title', '2:':'username', '3:':'password', '4:':'username', '5:':'secret', '6:':'tags'}
+        edit_json = click.edit(json.dumps(edit_json, indent=4), require_save=True, extension='.json')
     clean_exit()
 
 @cli.command(name='import')# TODO CSV; check for file extension before parsing

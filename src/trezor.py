@@ -72,6 +72,29 @@ class TrezorDevice:
             raise ValueError("Invalid choice, exiting...")
 
     # @author:satoshilabs
+    def __getFileEncKey(self, masterKey):
+        filekey, enckey = masterKey[:len(masterKey) // 2], masterKey[len(masterKey) // 2:]
+        FILENAME_MESS = b'5f91add3fa1c3c76e90c90a3bd0999e2bd7833d06a483fe884ee60397aca277a'
+        digest = hmac.new(str.encode(filekey), FILENAME_MESS, hashlib.sha256).hexdigest()
+        filename = digest + '.pswd'
+        return [filename, filekey, enckey]
+
+    # @author:satoshilabs
+    def __decryptMasterKey(self):
+        self.__getClient()
+        ENC_KEY = 'Activate TREZOR Password Manager?'
+        ENC_VALUE = bytes.fromhex('2d650551248d792eabf628f451200d7f51cb63e46aadcbb1038aacb05e8c8aee2d650551248d792eabf628f451200d7f51cb63e46aadcbb1038aacb05e8c8aee')
+        key = misc.encrypt_keyvalue(
+            self.client,
+            BIP32_PATH,
+            ENC_KEY,
+            ENC_VALUE,
+            True,
+            True
+        )
+        return key.hex()
+
+    # @author:satoshilabs
     def getDecryptedNonce(self, entry):
         self.__getClient()
         if 'item' in entry:
@@ -119,29 +142,6 @@ class TrezorDevice:
 
         return encrypted_nonce.hex()
 
-    # @author:satoshilabs
-    def getFileEncKey(self, masterKey):
-        filekey, enckey = masterKey[:len(masterKey) // 2], masterKey[len(masterKey) // 2:]
-        FILENAME_MESS = b'5f91add3fa1c3c76e90c90a3bd0999e2bd7833d06a483fe884ee60397aca277a'
-        digest = hmac.new(str.encode(filekey), FILENAME_MESS, hashlib.sha256).hexdigest()
-        filename = digest + '.pswd'
-        return [filename, filekey, enckey]
-
-    # @author:satoshilabs
-    def decryptMasterKey(self, client):
-        self.__getClient()
-        ENC_KEY = 'Activate TREZOR Password Manager?'
-        ENC_VALUE = bytes.fromhex('2d650551248d792eabf628f451200d7f51cb63e46aadcbb1038aacb05e8c8aee2d650551248d792eabf628f451200d7f51cb63e46aadcbb1038aacb05e8c8aee')
-        key = misc.encrypt_keyvalue(
-            self.client,
-            BIP32_PATH,
-            ENC_KEY,
-            ENC_VALUE,
-            True,
-            True
-        )
-        return key.hex()
-
     def getEntropy(self, length):
         self.__getClient()
         trezor_entropy = misc.get_entropy(self.client, length//2)
@@ -153,5 +153,5 @@ class TrezorDevice:
 
     def getTrezorKeys(self):
         self.__getClient()
-        masterKey = self.decryptMasterKey(self.client)
-        return self.getFileEncKey(masterKey)
+        masterKey = self.__decryptMasterKey()
+        return self.__getFileEncKey(masterKey)

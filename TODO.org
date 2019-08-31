@@ -11,15 +11,16 @@
 ** TODO get cryptomodul correct and secure
 ** TODO CSV Export
 ** TODO CSV Import
+** DONE order function
 ** DONE make lists in edit entry/tags json output
 * Optimze
-** TODO use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
 ** TODO simplify json error checking
+** DONE use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
 * dev workflow
 ** TODO sh scripts for building, testing
-** TODO write unittests for every method
+** TODO write pytests for every method
 ** TODO naming conventions
-** TODO pipenv
+** TODO pipenv + best practice
 ** TODO docker emulator
 * repository
 ** TODO subrepo trezorlib for testing
