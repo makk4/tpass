@@ -80,6 +80,10 @@ Help option will give overview
     show      Show entries
     unlock    Unlock and write metadata to disk
 
+Autocompletion for commands and entries works with bash and zsh
+
+.. image:: tabcompletion.png
+
 Commands
 #########################
 
@@ -211,18 +215,62 @@ Example:
 insert 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+**Aliase:** ins, create
+
 .. code-block:: bash
 
-    tpass insert
+    tpass insert [--tag,-t] [--direct,-d --title <title> --user <username> --pwd <password> --secret <secret>]
+
+**--tag** insert a new tag
+**--direct** insert with parameters, otherwise editor will open
 
 Example:
 
 .. code-block:: bash
 
-    ➜ ~ tpass insert
+    ➜ ~ tpass insert -d --title "google.com" --user "tpass@gmail.com" --pwd "1234"
+
+Editor will open, where you can edit all fields
+
+.. code-block:: json
+
+    {
+        "item/url*": "",
+        "title": "",
+        "username": "",
+        "password": "",
+        "secret": "",
+        "tags": {
+            "inUse": [],
+            "chooseFrom": [
+                "Social",
+                "Bitcoin",
+                "development",
+                "Favorites"
+            ]
+        }
+    }
 
 edit
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+    tpass edit [--tag,-t] <entry_or_tag>
+
+**--tag** edit tag
+
+Example
+
+.. code-block:: bash
+
+    ➜ ~ tpass edit Favorites/google.com:tpass@gmail.com#6
+
+    ➜ ~ tpass edit google.com:tpass@gmail.com
+
+    ➜ ~ tpass edit "#6"
+
+which will open editor
 
 .. code-block:: json
 
@@ -246,6 +294,10 @@ edit
     }
 
 Edit tag
+
+.. code-block:: bash
+
+    ➜ ~ tpass edit -t bitcoin/
 
 .. code-block:: json
 
@@ -277,8 +329,37 @@ Edit tag
 remove
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+**Aliase:** rm, del, delete
+
+.. code-block:: bash
+
+    tpass remove [--tag,-t] [--recursive,-r] [--force,-f] <entry_or_tag>
+
+**--tag** remove tag
+**--force** dont ask for confirmation
+**--recursive** remove tag recursive, with all the entries belong to the tag
+
+Example
+
+.. code-block:: bash
+
+    ➜ ~ tpass rm Favorites/google.com:tpass@gmail.com#6 Social/instagram.com:tpass@gmail.com#2 
+    Delete entries google.com, instagram.com [y/N]:
+
 git
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+    tpass git <command>
+
+Runs git commands against password store
+
+.. code-block:: bash
+
+    ➜ ~ tpass git status
+    On branch master
+    nothing to commit, working tree clean
 
 config
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -343,27 +424,16 @@ Example:
 export
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CSV export
+Export password-store in json format
 
-Example:
+.. code-block:: bash
 
-.. code-block:: json
-
-    {
-        "export.csv": {
-            "orderAndChooseFields": [
-                "title",
-                "item/url*",
-                "username",
-                "password",
-                "secret",
-                "tags"
-            ]
-        }
-    }
+    tpass exort [--path,-p] [--file-format,-f <json|csv>]
 
 import
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Import password-store from json format
 
 .. code-block:: bash
 
@@ -375,22 +445,6 @@ Example:
 
     ➜ ~ tpass import ~/export.csv
 
-CSV import
-
-.. code-block:: json
-
-    {
-        "import.csv": {
-            "orderAndChooseFields": [
-                "title",
-                "item/url*",
-                "username",
-                "password",
-                "secret",
-                "tags"
-            ]
-        }
-    }
 
 Files
 #########################
@@ -412,6 +466,8 @@ Config values
 
 - **fileName**
 - **path**
-- **useGit**
-- **storeMetadataOnDisk**
+- **useGit** (true|false) default: false
+- **storeMetadataOnDisk** (true|false) default: true
+- **useIcons** (true|false) default: false
+- **orderBy** (date|title) default: date
 

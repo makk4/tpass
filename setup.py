@@ -28,6 +28,6 @@ setup(
     entry_points={
         'console_scripts': ['tpass=src.main:cli'],
     },
-    data_files=[('man/tpass1', ['/docs/tpass.1/'])],
+    data_files=[('man/tpass1', ['docs/tpass.1'])],
     test_suite='nose.collector',
 )

@@ -1,32 +1,38 @@
-*/release/*
+*/beta/*
+* TODO reduce complexity
+* TODO get cryptomodul correct and secure
 * TODO Github release
 * TODO upload to PyPi
 * TODO debian package
 * TODO arch package
 * TODO windows exe
 
-*/alpha-0.1.8/*
+*/alpha-0.1.9/*
 * Basic features
-** TODO reduce complexity
-** TODO get cryptomodul correct and secure
 ** TODO CSV Export
 ** TODO CSV Import
-** DONE order function
-** DONE make lists in edit entry/tags json output
 * Optimze
-** TODO simplify json error checking
-** DONE use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
+** TODO simplify edit error checking
 * dev workflow
 ** TODO sh scripts for building, testing
 ** TODO write pytests for every method
 ** TODO naming conventions
 ** TODO pipenv + best practice
-** TODO docker emulator
+** TODO docker + emulator
 * repository
 ** TODO subrepo trezorlib for testing
 * TPM compatible
-** TODO check if Nonce changes on every edit in TPM
 ** TODO input parsing should handle all symbols in names -> -u, -t, -i, -p, -s
+
+*/alpha-0.1.8/*
+* Basic features
+** DONE test Git
+** DONE order function
+** DONE make lists in edit entry/tags json output
+* Optimze
+** DONE use python mapping and list functions, ex getEntries by Tag -> map; tags to String -> map
+* TPM compatible
+** DONE check if Nonce changes on every edit in TPM
 
 */alpha-0.1.7/*
 * Basic features

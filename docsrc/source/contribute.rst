@@ -34,9 +34,25 @@ update
 
     git pull --recurse-submodules
 
-
-Unittests
+Pytests
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+depencies
+
+.. code-block:: bash
+
+    pip3 install --user pytest pytest-cov
+
+run tests with coverage
+
+.. code-block:: bash
+
+    pytest --cov=src test
+
+Emulator
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+download emulator
 
 depencies
 
@@ -44,14 +60,20 @@ depencies
 
     sudo apt-get install scons libsdl2-dev libsdl2-image-dev
 
-download emulator
+install
 
 .. code-block:: bash
 
     git clone --recursive https://github.com/trezor/trezor-firmware.git
     cd trezor-firmware/core
     make vendor
-    ./build-docker.sh
+    ./emu.sh
+
+activate 
+
+.. code-block:: bash
+
+    trezord -e 2221
 
 update
 

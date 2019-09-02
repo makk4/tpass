@@ -1,71 +1,67 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>1   Design &#8212; tpass 0.1.8 documentation</title>
+    <meta charset="utf-8" />
+    <title>1 Design &#8212; tpass 0.1.8 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '0.1.8',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="1   Contribute" href="contribute.html" />
-    <link rel="prev" title="1   Manual" href="manual.html" />
+    <link rel="next" title="1 Contribute" href="contribute.html" />
+    <link rel="prev" title="1 Manual" href="manual.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
+  
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <div class="section" id="design">
-<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Design</a><a class="headerlink" href="#design" title="Permalink to this headline">¶</a></h1>
+<h1><a class="toc-backref" href="#id1"><span class="sectnum">1</span> Design</a><a class="headerlink" href="#design" title="Permalink to this headline">¶</a></h1>
 <div class="contents topic" id="contents">
 <p class="topic-title first">Contents</p>
 <ul class="auto-toc simple">
-<li><a class="reference internal" href="#design" id="id1">1&nbsp;&nbsp;&nbsp;Design</a><ul class="auto-toc">
-<li><a class="reference internal" href="#privacy" id="id2">1.1&nbsp;&nbsp;&nbsp;Privacy</a></li>
-<li><a class="reference internal" href="#cryptography" id="id3">1.2&nbsp;&nbsp;&nbsp;Cryptography</a><ul class="auto-toc">
-<li><a class="reference internal" href="#entropy" id="id4">1.2.1&nbsp;&nbsp;&nbsp;Entropy</a></li>
-<li><a class="reference internal" href="#password-file-encryption-and-decryption" id="id5">1.2.2&nbsp;&nbsp;&nbsp;Password file encryption and decryption</a></li>
-<li><a class="reference internal" href="#entry-encryption-and-decryption" id="id6">1.2.3&nbsp;&nbsp;&nbsp;Entry encryption and decryption</a></li>
+<li><p><a class="reference internal" href="#design" id="id1"><span class="sectnum">1</span> Design</a></p>
+<ul class="auto-toc">
+<li><p><a class="reference internal" href="#privacy" id="id2"><span class="sectnum">1.1</span> Privacy</a></p></li>
+<li><p><a class="reference internal" href="#cryptography" id="id3"><span class="sectnum">1.2</span> Cryptography</a></p>
+<ul class="auto-toc">
+<li><p><a class="reference internal" href="#entropy" id="id4"><span class="sectnum">1.2.1</span> Entropy</a></p></li>
+<li><p><a class="reference internal" href="#password-file-encryption-and-decryption" id="id5"><span class="sectnum">1.2.2</span> Password file encryption and decryption</a></p></li>
+<li><p><a class="reference internal" href="#entry-encryption-and-decryption" id="id6"><span class="sectnum">1.2.3</span> Entry encryption and decryption</a></p></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#syncing" id="id7">1.3&nbsp;&nbsp;&nbsp;Syncing</a><ul class="auto-toc">
-<li><a class="reference internal" href="#sync-error-handling" id="id8">1.3.1&nbsp;&nbsp;&nbsp;Sync error handling</a></li>
+<li><p><a class="reference internal" href="#syncing" id="id7"><span class="sectnum">1.3</span> Syncing</a></p>
+<ul class="auto-toc">
+<li><p><a class="reference internal" href="#sync-error-handling" id="id8"><span class="sectnum">1.3.1</span> Sync error handling</a></p></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#key-handling" id="id9">1.4&nbsp;&nbsp;&nbsp;Key Handling</a></li>
+<li><p><a class="reference internal" href="#key-handling" id="id9"><span class="sectnum">1.4</span> Key Handling</a></p></li>
 </ul>
 </li>
 </ul>
 </div>
 <div class="section" id="privacy">
-<h2><a class="toc-backref" href="#id2">1.1&nbsp;&nbsp;&nbsp;Privacy</a><a class="headerlink" href="#privacy" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id2"><span class="sectnum">1.1</span> Privacy</a><a class="headerlink" href="#privacy" title="Permalink to this headline">¶</a></h2>
 <p>There are two mods aviable for handling metadata</p>
 <ul class="simple">
-<li>write tempfile with metadata to disk</li>
+<li><p>write tempfile with metadata to disk</p></li>
 </ul>
 <p>Unlocks the password file and writes the json file into <strong>/dev/shm/</strong> if aviable
 otherwise prints a warning and uses tmp directory of OS, which would be the case
@@ -74,21 +70,21 @@ metadata is read from this file. Provides simpler read access without require
 unlocking every time. At no time the entry password or secret fields are stored
 plaintext in tmp file.</p>
 <ul class="simple">
-<li>decrypt password file on every access</li>
+<li><p>decrypt password file on every access</p></li>
 </ul>
 <p>Unlocks the password file and reads the json file with metadata into ram.
 After every operation this must be done again, but no metadata is stored on
 disk.</p>
 </div>
 <div class="section" id="cryptography">
-<h2><a class="toc-backref" href="#id3">1.2&nbsp;&nbsp;&nbsp;Cryptography</a><a class="headerlink" href="#cryptography" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id3"><span class="sectnum">1.2</span> Cryptography</a><a class="headerlink" href="#cryptography" title="Permalink to this headline">¶</a></h2>
 <p><strong>Satoshilabs</strong> has provided python implementations for the decryption functions for the
 <strong>Trezor Password manager</strong>. tpass has implented the inverse encryption function.</p>
 <div class="section" id="entropy">
-<h3><a class="toc-backref" href="#id4">1.2.1&nbsp;&nbsp;&nbsp;Entropy</a><a class="headerlink" href="#entropy" title="Permalink to this headline">¶</a></h3>
+<h3><a class="toc-backref" href="#id4"><span class="sectnum">1.2.1</span> Entropy</a><a class="headerlink" href="#entropy" title="Permalink to this headline">¶</a></h3>
 <p>All the random data needed for generating the initialization vector <strong>iv</strong> is
 taken from <strong>os.random()</strong> and the trezor device 50:50, with the following function:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">getEntropy</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">length</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">getEntropy</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">length</span><span class="p">):</span>
     <span class="n">trezor_entropy</span> <span class="o">=</span> <span class="n">misc</span><span class="o">.</span><span class="n">get_entropy</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">length</span><span class="o">//</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">urandom_entropy</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">urandom</span><span class="p">(</span><span class="n">length</span><span class="o">//</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">entropy</span> <span class="o">=</span> <span class="n">trezor_entropy</span> <span class="o">+</span> <span class="n">urandom_entropy</span>
@@ -98,19 +94,19 @@ taken from <strong>os.random()</strong> and the trezor device 50:50, with the fo
 </pre></div>
 </div>
 <ul class="simple">
-<li>12 byte of entropy are used for encryption functions</li>
-<li>32 byte for getting the nonce</li>
+<li><p>12 byte of entropy are used for encryption functions</p></li>
+<li><p>32 byte for getting the nonce</p></li>
 </ul>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">ENC_ENTROPY_BYTES</span> <span class="o">=</span> <span class="mi">12</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ENC_ENTROPY_BYTES</span> <span class="o">=</span> <span class="mi">12</span>
 <span class="n">NONCE_ENTROPY_BYTES</span> <span class="o">=</span> <span class="mi">32</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="password-file-encryption-and-decryption">
-<h3><a class="toc-backref" href="#id5">1.2.2&nbsp;&nbsp;&nbsp;Password file encryption and decryption</a><a class="headerlink" href="#password-file-encryption-and-decryption" title="Permalink to this headline">¶</a></h3>
+<h3><a class="toc-backref" href="#id5"><span class="sectnum">1.2.2</span> Password file encryption and decryption</a><a class="headerlink" href="#password-file-encryption-and-decryption" title="Permalink to this headline">¶</a></h3>
 <p>Storage decryption function is taking from <strong>trezorlib/python/tools/pwd_ready.py</strong>
 -&gt; <strong>decryptStorage</strong>, the shown encrytion function is implemented by tpass.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">encryptStorage</span><span class="p">(</span><span class="n">db_json</span><span class="p">,</span> <span class="n">store_path</span><span class="p">,</span> <span class="n">encKey</span><span class="p">,</span> <span class="n">iv</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">encryptStorage</span><span class="p">(</span><span class="n">db_json</span><span class="p">,</span> <span class="n">store_path</span><span class="p">,</span> <span class="n">encKey</span><span class="p">,</span> <span class="n">iv</span><span class="p">):</span>
     <span class="n">cipherkey</span> <span class="o">=</span> <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="n">encKey</span><span class="p">)</span>
     <span class="n">cipher</span> <span class="o">=</span> <span class="n">Cipher</span><span class="p">(</span><span class="n">algorithms</span><span class="o">.</span><span class="n">AES</span><span class="p">(</span><span class="n">cipherkey</span><span class="p">),</span> <span class="n">modes</span><span class="o">.</span><span class="n">GCM</span><span class="p">(</span><span class="n">iv</span><span class="p">),</span> <span class="n">backend</span><span class="o">=</span><span class="n">default_backend</span><span class="p">())</span>
     <span class="n">encryptor</span> <span class="o">=</span> <span class="n">cipher</span><span class="o">.</span><span class="n">encryptor</span><span class="p">()</span>
@@ -122,10 +118,10 @@ taken from <strong>os.random()</strong> and the trezor device 50:50, with the fo
 </div>
 </div>
 <div class="section" id="entry-encryption-and-decryption">
-<h3><a class="toc-backref" href="#id6">1.2.3&nbsp;&nbsp;&nbsp;Entry encryption and decryption</a><a class="headerlink" href="#entry-encryption-and-decryption" title="Permalink to this headline">¶</a></h3>
+<h3><a class="toc-backref" href="#id6"><span class="sectnum">1.2.3</span> Entry encryption and decryption</a><a class="headerlink" href="#entry-encryption-and-decryption" title="Permalink to this headline">¶</a></h3>
 <p>Similar entry decryption function is taking from <strong>trezorlib/python/tools/pwd_ready.py</strong>
 -&gt; <strong>decryptEntryValue</strong>, the shown encrytion function is implemented by tpass.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">encryptEntryValue</span><span class="p">(</span><span class="n">nonce</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">iv</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">encryptEntryValue</span><span class="p">(</span><span class="n">nonce</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">iv</span><span class="p">):</span>
     <span class="n">cipherkey</span> <span class="o">=</span> <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="n">nonce</span><span class="p">)</span>
     <span class="n">cipher</span> <span class="o">=</span> <span class="n">Cipher</span><span class="p">(</span><span class="n">algorithms</span><span class="o">.</span><span class="n">AES</span><span class="p">(</span><span class="n">cipherkey</span><span class="p">),</span> <span class="n">modes</span><span class="o">.</span><span class="n">GCM</span><span class="p">(</span><span class="n">iv</span><span class="p">),</span> <span class="n">backend</span><span class="o">=</span><span class="n">default_backend</span><span class="p">())</span>
     <span class="n">encryptor</span> <span class="o">=</span> <span class="n">cipher</span><span class="o">.</span><span class="n">encryptor</span><span class="p">()</span>
@@ -138,7 +134,7 @@ taken from <strong>os.random()</strong> and the trezor device 50:50, with the fo
 change made to the entry. The implementation to get the nonce uses the provided
 trezorlibs API. The inverse function to get the decrypted nonce was also taken
 from <strong>trezorlib/python/tools/pwd_ready.py</strong>.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">getEncryptedNonce</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">entry</span><span class="p">,</span> <span class="n">entropy</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">getEncryptedNonce</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">entry</span><span class="p">,</span> <span class="n">entropy</span><span class="p">):</span>
 <span class="k">if</span> <span class="s1">&#39;item&#39;</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
     <span class="n">item</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;item&#39;</span><span class="p">]</span>
 <span class="k">else</span><span class="p">:</span>
@@ -165,13 +161,13 @@ from <strong>trezorlib/python/tools/pwd_ready.py</strong>.</p>
 </div>
 </div>
 <div class="section" id="syncing">
-<h2><a class="toc-backref" href="#id7">1.3&nbsp;&nbsp;&nbsp;Syncing</a><a class="headerlink" href="#syncing" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id7"><span class="sectnum">1.3</span> Syncing</a><a class="headerlink" href="#syncing" title="Permalink to this headline">¶</a></h2>
 <p>There are three cloud options aviable and and also offline mode.</p>
 <ul class="simple">
-<li>Dropbox</li>
-<li>Goolge Drive</li>
-<li>git</li>
-<li>offline</li>
+<li><p>Dropbox</p></li>
+<li><p>Goolge Drive</p></li>
+<li><p>git</p></li>
+<li><p>offline</p></li>
 </ul>
 <p>By choosing Dropbox or Google Drive the password file is created in the
 according directories to be compatible with Trezor Password Manager. The Syncing
@@ -179,7 +175,7 @@ process is handled by Dropbox or Google.</p>
 <p>When using git the python module <strong>subprocess</strong> is used to provide git access from
 everywhere by appending tpass to every git command.</p>
 <div class="section" id="sync-error-handling">
-<h3><a class="toc-backref" href="#id8">1.3.1&nbsp;&nbsp;&nbsp;Sync error handling</a><a class="headerlink" href="#sync-error-handling" title="Permalink to this headline">¶</a></h3>
+<h3><a class="toc-backref" href="#id8"><span class="sectnum">1.3.1</span> Sync error handling</a><a class="headerlink" href="#sync-error-handling" title="Permalink to this headline">¶</a></h3>
 <p>On tpass startup a lockfile is created <strong>~/.tpass/lockfile</strong> and is deleted on
 normal exit or when a exception occurs. If a second instance of tpass is trying
 to read the password file, it discovers the lockfile and exits. When saving
@@ -188,12 +184,15 @@ the meantime and only proceeds on an unchanged pwd file.</p>
 </div>
 </div>
 <div class="section" id="key-handling">
-<h2><a class="toc-backref" href="#id9">1.4&nbsp;&nbsp;&nbsp;Key Handling</a><a class="headerlink" href="#key-handling" title="Permalink to this headline">¶</a></h2>
+<h2><a class="toc-backref" href="#id9"><span class="sectnum">1.4</span> Key Handling</a><a class="headerlink" href="#key-handling" title="Permalink to this headline">¶</a></h2>
+<p>Currently the keys are never stored throughout a session, which means you hav to accept multiple times for some commands,
+unlike Trezor Password Manger. Future implementations could handle the keys more user friendly.</p>
 </div>
 </div>
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -201,19 +200,19 @@ the meantime and only proceeds on an unchanged pwd file.</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="manual.html" title="previous chapter">1&nbsp;&nbsp;&nbsp;Manual</a></li>
-      <li>Next: <a href="contribute.html" title="next chapter">1&nbsp;&nbsp;&nbsp;Contribute</a></li>
+      <li>Previous: <a href="manual.html" title="previous chapter"><span class="sectnum">1</span> Manual</a></li>
+      <li>Next: <a href="contribute.html" title="next chapter"><span class="sectnum">1</span> Contribute</a></li>
   </ul></li>
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -224,8 +223,8 @@ the meantime and only proceeds on an unchanged pwd file.</p>
       &copy;2019, makk4.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
       <a href="_sources/design.rst.txt"

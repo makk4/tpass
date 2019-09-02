@@ -36,7 +36,7 @@ LOCK_FILE = os.path.join(CONFIG_PATH, 'lockfile')
 # Actual Files
 ICONS = {'home':u'\U0001f3e0', 'person-stalker':u'\U0001F469\u200D\U0001F467', 'social-bitcoin':'₿', 'person':u'\U0001F642', 'star':u'\u2B50', 'flag':u'\U0001F3F3', 'heart':u'\u2764', 'settings':u'\u2699', 'email':u'\u2709', 'cloud':u'\u2601', 'alert-circled':u'\u26a0', 'android-cart':u'\U0001f6d2', 'image':u'\U0001F5BC', 'card':u'\U0001f4b3', 'earth':u'\U0001F310', 'wifi':u'\U0001f4f6'}
 CONFIG = {'fileName': '', 'path': DEFAULT_PATH, 'useGit': False, 'clipboardClearTimeSec': 15, 'storeMetaDataOnDisk': True, 'orderType': 'date', 'showIcons': False}
-LOCK = {'uuid':uuid.uuid4().int, }
+LOCK = {'uuid':uuid.uuid4().int}
 # Constants
 ENC_ENTROPY_BYTES = 12
 NONCE_ENTROPY_BYTES = 32
@@ -68,7 +68,7 @@ def load_config():
         write_config()
     with open(CONFIG_FILE) as f:
         CONFIG = json.load(f)
-    if 'fileName' not in CONFIG or 'path' not in CONFIG or 'storeMetaDataOnDisk' not in CONFIG:
+    if 'fileName' not in CONFIG or 'path' not in CONFIG or 'storeMetaDataOnDisk' not in CONFIG or 'orderType' not in CONFIG:
         handle_exception('CONFIG_PARSE_ERROR')
     pwd_file = os.path.join(CONFIG['path'], CONFIG['fileName'])
     if CONFIG['storeMetaDataOnDisk'] is True:
@@ -138,9 +138,9 @@ def save_storage():
         handle_exception('PASSWORD_FILE_ENCRYPT_ERROR', ex)
     if CONFIG['storeMetaDataOnDisk'] is True:
         with open(tmp_file, 'w') as f:
-            json.dump(db_json, f) 
+            json.dump(db_json, f)
     if CONFIG['useGit'] is True:
-        subprocess.call('git commit -m "update db"', cwd=CONFIG['path'], shell=True)
+        subprocess.call('git commit -am "sync password-store"', cwd=CONFIG['path'], shell=True)
         
 def load_wordlist():
     wordlist = DICEWARE_FILE
@@ -486,7 +486,7 @@ def init_cmd(path, cloud, no_disk):
         CONFIG['path'] = DROPBOX_PATH
     if not os.path.exists(CONFIG['path']):
         os.makedirs(CONFIG['path'])
-    if len(os.listdir(CONFIG['path'])) != 0:
+    if len(os.listdir(CONFIG['path'])) != 0 or CONFIG['fileName'] != '':
         handle_exception('INIT_ERROR', CONFIG['path'] + ' is not empty, not initialized')
     if cloud == 'git':
         CONFIG['useGit'] = True
@@ -504,8 +504,10 @@ def init_cmd(path, cloud, no_disk):
         crypto.encryptStorage(db_json, pwd_file, encKey, iv)
     except Exception as ex:
         handle_exception('PASSWORD_FILE_ENCRYPT_ERROR', ex)
+    unlock_storage()
     if cloud == 'git':
         subprocess.call('git add *.pswd', cwd=CONFIG['path'], shell=True)
+        subprocess.call('git commit -m "initial commit"', cwd=CONFIG['path'], shell=True)
     click.echo('password store initialized in ' + CONFIG['path'])
     clean_exit()
 
@@ -730,7 +732,7 @@ def edit_cmd(entry_string, tag):#TODO option --entry/--tag with default
 def git_cmd(commands):
     '''Call git commands on password store'''
     if CONFIG['useGit'] is True:
-        subprocess.call(['git '+ ' '.join(commands)], cwd=CONFIG['path'], shell=True)
+        subprocess.call('git '+ ' '.join(commands), cwd=CONFIG['path'], shell=True)
     else:
         click.echo('Git is not enabled')
     clean_exit()
@@ -772,8 +774,8 @@ def lock_cmd():
     clean_exit()
 
 @cli.command(name='export')# TODO CSV
-@click.option('-p', '--path', default=os.path.expanduser('~'), type=click.Path(), help='path for export')
-@click.option('-f', '--file-format', default='json', type=click.Choice(['json', 'csv','txt']), help='file format')
+@click.option('--path', '-p', default=os.path.expanduser('~'), type=click.Path(), help='path for export')
+@click.option('--file-format', '-f', default='json', type=click.Choice(['json', 'csv']), help='file format')
 def export_cmd(path, file_format):
     '''Export password store'''
     global entries
@@ -812,6 +814,7 @@ def import_cmd(path_to_file):
                 handle_exception('ITEM_FIELD_ERROR')
             e = ('',{'title': v['item/url*'], 'username': v['username'], 'password': {'type': 'Buffer', 'data': v['password']}, 'nonce': '', 'tags': [], 'safe_note': {'type': 'Buffer', 'data': v['secret']}, 'note': v['title'], 'success': True, 'export': True})
             insert_entry(e)
+            # TODO insert new tags from entries 
     save_storage()
     clean_exit()
 

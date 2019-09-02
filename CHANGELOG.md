@@ -13,7 +13,7 @@ First pre-release version
 - Use your own Wordlists of choice, default is EFF large
 - List, insert, delete, show, edit entries
 - Copy passwords to clipboard or show
-- Export, import database in JSON, CSV
+- Export, import database in JSON
 - Do not store metadata on disk mode
 - Combine entropy from device and os.random for all crypto functions
 - Bash and zsh auto completion

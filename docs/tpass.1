@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "TPASS" "1" "Aug 24, 2019" "0.1.8" "tpass"
+.TH "TPASS" "1" "Sep 02, 2019" "0.1.8" "tpass"
 .SH NAME
 tpass \- tpass Documentation
 .
@@ -300,6 +300,9 @@ unlock    Unlock and write metadata to disk
 .fi
 .UNINDENT
 .UNINDENT
+.sp
+Autocompletion for commands and entries works with bash and zsh
+[image]
 .SS 1.2\ \ \ Commands
 .SS 1.2.1\ \ \ init
 .INDENT 0.0
@@ -497,16 +500,21 @@ cold mortuary curtly reference splatter earpiece linoleum sheath tiling retail d
 .UNINDENT
 .UNINDENT
 .SS 1.2.8\ \ \ insert
+.sp
+\fBAliase:\fP ins, create
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-tpass insert
+tpass insert [\-\-tag,\-t] [\-\-direct,\-d \-\-title <title> \-\-user <username> \-\-pwd <password> \-\-secret <secret>]
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
+.sp
+\fB–tag\fP insert a new tag
+\fB–direct\fP insert with parameters, otherwise editor will open
 .sp
 Example:
 .INDENT 0.0
@@ -514,12 +522,69 @@ Example:
 .sp
 .nf
 .ft C
-➜ ~ tpass insert
+➜ ~ tpass insert \-d \-\-title "google.com" \-\-user "tpass@gmail.com" \-\-pwd "1234"
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Editor will open, where you can edit all fields
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+    "item/url*": "",
+    "title": "",
+    "username": "",
+    "password": "",
+    "secret": "",
+    "tags": {
+        "inUse": [],
+        "chooseFrom": [
+            "Social",
+            "Bitcoin",
+            "development",
+            "Favorites"
+        ]
+    }
+}
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
 .SS 1.2.9\ \ \ edit
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass edit [\-\-tag,\-t] <entry_or_tag>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fB–tag\fP edit tag
+.sp
+Example
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass edit Favorites/google.com:tpass@gmail.com#6
+
+➜ ~ tpass edit google.com:tpass@gmail.com
+
+➜ ~ tpass edit "#6"
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+which will open editor
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -554,6 +619,16 @@ Edit tag
 .sp
 .nf
 .ft C
+➜ ~ tpass edit \-t bitcoin/
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
 {
     "title": "bitcoin",
     "icon": {
@@ -583,7 +658,60 @@ Edit tag
 .UNINDENT
 .UNINDENT
 .SS 1.2.10\ \ \ remove
+.sp
+\fBAliase:\fP rm, del, delete
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass remove [\-\-tag,\-t] [\-\-recursive,\-r] [\-\-force,\-f] <entry_or_tag>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fB–tag\fP remove tag
+\fB–force\fP dont ask for confirmation
+\fB–recursive\fP remove tag recursive, with all the entries belong to the tag
+.sp
+Example
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass rm Favorites/google.com:tpass@gmail.com#6 Social/instagram.com:tpass@gmail.com#2
+Delete entries google.com, instagram.com [y/N]:
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .SS 1.2.11\ \ \ git
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tpass git <command>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Runs git commands against password store
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+➜ ~ tpass git status
+On branch master
+nothing to commit, working tree clean
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .SS 1.2.12\ \ \ config
 .sp
 \fBAliase:\fP conf
@@ -682,31 +810,20 @@ metadata deleted: /dev/shm/a8c2e3c46e835541d2d465a9572930b908bc2ef3e05c51387f8ec
 .UNINDENT
 .SS 1.2.15\ \ \ export
 .sp
-CSV export
-.sp
-Example:
+Export password\-store in json format
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-{
-    "export.csv": {
-        "orderAndChooseFields": [
-            "title",
-            "item/url*",
-            "username",
-            "password",
-            "secret",
-            "tags"
-        ]
-    }
-}
+tpass exort [\-\-path,\-p] [\-\-file\-format,\-f <json|csv>]
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
 .SS 1.2.16\ \ \ import
+.sp
+Import password\-store from json format
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -729,29 +846,6 @@ Example:
 .fi
 .UNINDENT
 .UNINDENT
-.sp
-CSV import
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-{
-    "import.csv": {
-        "orderAndChooseFields": [
-            "title",
-            "item/url*",
-            "username",
-            "password",
-            "secret",
-            "tags"
-        ]
-    }
-}
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
 .SS 1.3\ \ \ Files
 .INDENT 0.0
 .IP \(bu 2
@@ -763,7 +857,9 @@ CSV import
 .IP \(bu 2
 \fBconfig file\fP stores config values, located: ~/.tpass/config.json
 .IP \(bu 2
-\fBlogfile\fP stores config values, located: ~/.tpass/tpass.log
+\fBlogfile\fP stores log info, located: ~/.tpass/tpass.log
+.IP \(bu 2
+\fBwordlist\fP used for generating passphrases, default icluded is \fBEFF large\fP, place custom wordlist in: ~/.tpass/wordlist.txt
 .UNINDENT
 .SS 1.4\ \ \ Config values
 .INDENT 0.0
@@ -772,9 +868,13 @@ CSV import
 .IP \(bu 2
 \fBpath\fP
 .IP \(bu 2
-\fBuseGit\fP
+\fBuseGit\fP (true|false) default: false
 .IP \(bu 2
-\fBstoreMetadataOnDisk\fP
+\fBstoreMetadataOnDisk\fP (true|false) default: true
+.IP \(bu 2
+\fBuseIcons\fP (true|false) default: false
+.IP \(bu 2
+\fBorderBy\fP (date|title) default: date
 .UNINDENT
 .SS 1\ \ \ Design
 .SS Contents
@@ -972,6 +1072,9 @@ to read the password file, it discovers the lockfile and exits. When saving
 changes to the password file, it is also checked by timestamp, if it changed in
 the meantime and only proceeds on an unchanged pwd file.
 .SS 1.4\ \ \ Key Handling
+.sp
+Currently the keys are never stored throughout a session, which means you hav to accept multiple times for some commands,
+unlike Trezor Password Manger. Future implementations could handle the keys more user friendly.
 .SS 1\ \ \ Contribute
 .SS The tiny table of contents
 .INDENT 0.0
@@ -986,11 +1089,13 @@ the meantime and only proceeds on an unchanged pwd file.
 .IP \(bu 2
 \fI\%1.1.2\ \ \ Clone repository\fP
 .IP \(bu 2
-\fI\%1.1.3\ \ \ Unittests\fP
+\fI\%1.1.3\ \ \ Pytests\fP
 .IP \(bu 2
-\fI\%1.1.4\ \ \ Upload to PyPi\fP
+\fI\%1.1.4\ \ \ Emulator\fP
 .IP \(bu 2
-\fI\%1.1.5\ \ \ Docs\fP
+\fI\%1.1.5\ \ \ Upload to PyPi\fP
+.IP \(bu 2
+\fI\%1.1.6\ \ \ Docs\fP
 .UNINDENT
 .IP \(bu 2
 \fI\%1.2\ \ \ Code guidelines\fP
@@ -1036,7 +1141,34 @@ git pull \-\-recurse\-submodules
 .fi
 .UNINDENT
 .UNINDENT
-.SS 1.1.3\ \ \ Unittests
+.SS 1.1.3\ \ \ Pytests
+.sp
+depencies
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+pip3 install \-\-user pytest pytest\-cov
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+run tests with coverage
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+pytest \-\-cov=src test
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS 1.1.4\ \ \ Emulator
+.sp
+download emulator
 .sp
 depencies
 .INDENT 0.0
@@ -1050,7 +1182,7 @@ sudo apt\-get install scons libsdl2\-dev libsdl2\-image\-dev
 .UNINDENT
 .UNINDENT
 .sp
-download emulator
+install
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -1059,7 +1191,19 @@ download emulator
 git clone \-\-recursive https://github.com/trezor/trezor\-firmware.git
 cd trezor\-firmware/core
 make vendor
-\&./build\-docker.sh
+\&./emu.sh
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+activate
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+trezord \-e 2221
 .ft P
 .fi
 .UNINDENT
@@ -1076,7 +1220,7 @@ git pull \-\-recurse\-submodules
 .fi
 .UNINDENT
 .UNINDENT
-.SS 1.1.4\ \ \ Upload to PyPi
+.SS 1.1.5\ \ \ Upload to PyPi
 .sp
 depencies
 .INDENT 0.0
@@ -1103,7 +1247,7 @@ twine upload \-\-repository\-url https://test.pypi.org/legacy/ dist/*
 .fi
 .UNINDENT
 .UNINDENT
-.SS 1.1.5\ \ \ Docs
+.SS 1.1.6\ \ \ Docs
 .sp
 depencies
 .INDENT 0.0

@@ -149,3 +149,5 @@ the meantime and only proceeds on an unchanged pwd file.
 Key Handling
 ############################
 
+Currently the keys are never stored throughout a session, which means you hav to accept multiple times for some commands, 
+unlike Trezor Password Manger. Future implementations could handle the keys more user friendly.
