@@ -6,7 +6,7 @@ Click==7.0
 colorama==0.4.1
 construct==2.9.45
 cryptography==2.7
-ecdsa==0.13.2
+ecdsa==0.13.3
 idna==2.8
 libusb1==1.7.1
 mnemonic==0.18
