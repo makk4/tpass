@@ -21,4 +21,4 @@ six==1.12.0
 -e git+git@github.com:makk4/tpass.git@e71410edbee69303f6bffc7baa8b0515886ea607#egg=tpass
 trezor==0.11.4
 typing-extensions==3.7.4
-urllib3==1.25.3
+urllib3==1.26.5
