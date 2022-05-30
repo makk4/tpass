@@ -4,6 +4,8 @@ Simple Trezor Password Manager interface for command line, inspired by pass.
 
 Untested Beta Software! - Do not use it
 
+![build](https://github.com/makk4/tpass/actions/workflows/python-app.yml/badge.svg)
+
 <img src="docs/_images/tpass.png" alt="drawing" width="700"/>
 
 ## Table of contents
