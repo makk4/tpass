@@ -6,6 +6,7 @@ from src import crypto
 from src import trezor
 
 client = trezor.TrezorDevice()
+e_coinbase = {}
 
 def test_decryptEntryValue():
     e_coinbase = {}

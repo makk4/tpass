@@ -11,6 +11,7 @@ import unittest
 from src import main
 from src import trezor as trezorapi
 
+DEFAULT_PATH = ""
 
 class Tests_main(unittest.TestCase):
     """
