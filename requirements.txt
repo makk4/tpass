@@ -8,7 +8,7 @@ construct==2.9.45
 cryptography==3.3.2
 ecdsa==0.13.3
 idna==2.8
-libusb1==1.7.1
+libusb1==3.0.0
 mnemonic==0.18
 pbkdf2==1.3
 pyblake2==1.1.2
