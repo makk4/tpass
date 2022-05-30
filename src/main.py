@@ -625,7 +625,7 @@ def clip_cmd(user, url, secret, entry_string):
 def generate_cmd(length, insert, type_, clip, seperator, force, entropy):
     '''Generate new password'''
     global db_json
-    if (length < 6 and type_ is 'password') or (length < 3 and type_ is 'wordlist') or (length < 4 and type_ is 'pin'):
+    if (length < 6 and type_ == 'password') or (length < 3 and type_ == 'wordlist') or (length < 4 and type_ == 'pin'):
         if not click.confirm('Warning: ' + length + ' is too short for password with type ' + type_ + '. Continue?'):
             handle_exception('ABORTED')
     if entropy:
