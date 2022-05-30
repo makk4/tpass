@@ -18,7 +18,7 @@ requests==2.22.0
 shamir-mnemonic==0.1.0
 simplejson==3.16.0
 six==1.12.0
-git+git@github.com:makk4/tpass.git#egg=tpass
+git+git@github.com:makk4/tpass.git@develop#egg=tpass
 trezor==0.11.4
 typing-extensions==3.7.4
 urllib3==1.25.3
