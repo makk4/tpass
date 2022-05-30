@@ -21,4 +21,4 @@ six==1.12.0
 trezor==0.11.4
 typing-extensions==3.7.4
 urllib3==1.26.5
-git+git@github.com:makk4/tpass@47282e3#egg=tpass
+git+git@github.com/makk4/tpass@47282e3#egg=tpass
