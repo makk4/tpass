@@ -20,4 +20,4 @@ simplejson==3.16.0
 six==1.12.0
 trezor==0.11.4
 typing-extensions==3.7.4
-urllib3==1.25.3
+urllib3==1.26.5
