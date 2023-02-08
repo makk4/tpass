@@ -5,7 +5,7 @@ chardet==3.0.4
 Click==7.0
 colorama==0.4.1
 construct==2.9.45
-cryptography==3.3.2
+cryptography==39.0.1
 ecdsa==0.13.3
 idna==2.8
 libusb1==3.0.0
